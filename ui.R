@@ -2,55 +2,54 @@
 
 source("helper_functions.R")
 
+# Apply the CSS used by the Shiny app to the ggplot2 plots
+thematic_shiny()
 
-ui <- fluidPage(theme = shinytheme("cerulean"), 
-                title = "Model Builder App",
-                use_shiny_title(),
-                titlePanel("Model Builder: Load Data and Build some Models!"),
-                sidebarPanel( width = 3,
-                              
-                              fileInput(inputId = "file",
-                                        label = "Please select an Excel file"),
-                              
-                              numericInput(inputId = "sheet_index",
-                                           label = "Please choose the sheet index to upload",
-                                           min = 1,
-                                           max = 10,
-                                           value = 1),
-                              
-                              sliderInput(inputId = "prop",
-                                          label = "Proportion for the training set",
-                                          value = 0,
-                                          min   = 0,
-                                          max   = 1,
-                                          step  = 0.05),
-                              
-                              selectInput(inputId = "y_var",
-                                          label = "select continuous outcome variable",
-                                          choices = "",
-                                          multiple = FALSE),
-                              
-                              selectInput(inputId = "x_vars",
-                                          label = "select predictor variables",
-                                          choices = "",
-                                          multiple = TRUE),
-                              
-                              selectInput(inputId = "tr_vars",
-                                          label = "select variables to transform",
-                                          choices = "",
-                                          multiple = TRUE),
-                              
+
+ui <- page_sidebar( 
+  
+  
+  theme = bs_theme(preset  = 'minty',
+                   version = 5,
+                   
+                   "navbar-bg" = "green"),
+                   
+  
+                title = "Model Builder: Load Data and Build some Models!",
+                sidebar = sidebar(
+                                fileInput(inputId = "file", accept = c('csv', 'xlsx'),
+                                          label = "Please select an Excel file"),
+                                
+                                numericInput(inputId = "sheet_index",
+                                             label = "Please choose the sheet index to upload",
+                                             min = 1,
+                                             max = 10,
+                                             value = 1),
+                                
+                                selectInput(inputId = "y_var",
+                                            label = "select continuous outcome variable",
+                                            choices = "",
+                                            multiple = FALSE),
+                                
+                                selectInput(inputId = "x_vars",
+                                            label = "select predictor variables",
+                                            choices = "",
+                                            multiple = TRUE),
+                                
+                                selectInput(inputId = "tr_vars",
+                                            label = "select variables to transform",
+                                            choices = "",
+                                            multiple = TRUE),
+                                
                                 pmap(vars[1,], mySelectInput),
                                 pmap(vars[2,], mySelectInput),
                                 pmap(vars[3,], mySelectInput),
-                              
                                 
-                              
-                              
-                              
+                  
                 ),
                 
-                mainPanel(
+                
+                layout_columns(
                   navbarPage("",
                              id = 'datasets',
                              tabPanel(
@@ -80,7 +79,8 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
                              navbarMenu("Model Results",
 
                                         tabpanFun2(title = "Model results - First model",id1 = "model_summary1", id3 = "hetero", id4 = "multi", id5 = "auto",
-                                                   id6 = "correct1", id7 = "downloadPreds1", id8 = "downloadCoef1", run_id = "run1"),
+                                                   id6 = "correct1", id7 = "downloadPreds1", id8 = "downloadCoef1", id9 = 'model_report',
+                                                   run_id = "run1"),
 
                                         tabpanFun2(title = "Model results - Second model",id1 = "model_summary2", id3 = "hetero2", id4 = "multi2", id5 = "auto2",
                                                    id6 = "correct2",id7 = "downloadPreds2", id8 = "downloadCoef2", run_id = "run2"),
@@ -146,6 +146,13 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
                                         
                                         tabPanel(
                                           
+                                          sliderInput(inputId = "prop",
+                                                      label = "Proportion for the training set",
+                                                      value = 0,
+                                                      min   = 0,
+                                                      max   = 1,
+                                                      step  = 0.05),
+                                          
                                           title = "Decision tree model",
                                           actionButton("idn1", "Click here to run the model"),
                                           downloadButton("dw1","Download predictions"),
@@ -175,27 +182,12 @@ ui <- fluidPage(theme = shinytheme("cerulean"),
                               tabPanel(
                                 title = "IV Regression",
                                 actionButton("idn3","Click here to run the model"),
-                                #downloadButton("iv_summary1", "Summary report"),
                                 downloadButton("dw3","Download coefficients"),
                                 
                                 verbatimTextOutput("iv_summary")
                               
                              ),
-                             
-                             # tabPanel(
-                             #   title = "Download time series data",
-                             #   downloadButton("scrape","Download data"),
-                             #   DTOutput("scrape1")
-                             # )
-                             
-                             #   column(4, pmap(vars[1,], mySelectInput)),
-                             #   column(4, pmap(vars[2,], mySelectInput)),
-                             #   column(4, pmap(vars[3,], mySelectInput)),
-                             #   actionButton("idn3","Click here to run the model"),
-                             #   downloadButton("iv_summary1", "Summary report"),
-                             #   downloadButton("dw3","Download coefficients"),
-                             #   
-                             #   verbatimTextOutput("iv_summary")
+                  )     
                   )
-                )
+                
 )

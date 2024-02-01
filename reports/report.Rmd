@@ -1,0 +1,52 @@
+---
+title: "`r params$title`"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document: default
+  html_document: default
+params:
+  title: Model Report
+  mod1: null
+  mod2: null
+---
+
+
+
+```{r, echo=FALSE}
+
+# Environment set up
+
+options(scipen = 999)
+
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  echo = FALSE
+)
+
+```
+
+## Model one report: Linear regression model without the dummy variables
+
+
+
+```{r}
+
+params$mod1$coefficients
+
+
+params$mod1 %>% summary() %>% broom::tidy() %>% pander::pander()
+
+```
+
+## Model two report: Linear regression model with the dummy variables
+
+
+```{r}
+params$mod2$coefficients
+
+
+params$mod2 %>% summary() %>% broom::tidy() %>% pander::pander()
+
+```
+

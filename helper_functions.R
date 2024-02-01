@@ -31,6 +31,10 @@ library(markdown)
 library(e1071)
 library(vars)  
 library(tsDyn)
+library(bslib)
+library(thematic)
+
+
 
 #  a helper function to generate multiple select input statements in the UI
 vars <- tibble::tribble(
@@ -62,7 +66,7 @@ tabpanFun1 <- function(id, id2 = NULL, label, label2 = "Download Me!", OutputId,
 
 tabpanFun2 <- function(title, label1 = "Predictions", label2 = "Coefficients", id1 = NULL, 
                        id2 = NULL, id3 = NULL, id4 = NULL, id5 = NULL, id6 = NULL, 
-                       id7 = NULL,id8=NULL, run_id = NULL, ...) {
+                       id7 = NULL,id8=NULL, id9=NULL, run_id = NULL, ...) {
   
   tabPanel(
     title = title,
@@ -75,6 +79,7 @@ tabpanFun2 <- function(title, label1 = "Predictions", label2 = "Coefficients", i
     verbatimTextOutput(id6),
     downloadButton(id7, label1),
     downloadButton(id8, label2),
+    downloadButton(id9, label = 'download report')
     
     
   )

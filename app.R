@@ -10,5 +10,5 @@ library(shinytitle)
 library(markdown)
 
 
-shinyApp(ui, server)
+shinyApp(ui = ui, server = server)
 

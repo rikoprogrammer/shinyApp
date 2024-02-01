@@ -3,14 +3,24 @@
 
 server <- function(input, output, session) {
   
+
+  
   input_dataset <- reactive(
+    
     
     if(is.null(input$file)) {
       return("")
     }else {
-      # read.csv(file = input$file$datapath)
-      f_data = read_excel(path = input$file$datapath, sheet = input$sheet_index)
-      f_data %>% janitor::clean_names()
+      
+      #allow for both csv and xlsx file uploads
+      
+      ext <- tools::file_ext(input$file$name)
+      switch(ext,
+             csv  = readr::read_csv(file = input$file$datapath) %>% janitor::clean_names(),
+             xlsx = readxl::read_excel(path = input$file$datapath, sheet = input$sheet_index) %>% 
+               janitor::clean_names(),
+             validate("Invalid file; Please upload a .csv or .xlsx file")
+      )
     }
   ) 
   
@@ -53,6 +63,18 @@ server <- function(input, output, session) {
     
   })
   
+  
+  dat <- reactive({
+    
+    input_dataset() %>% 
+    dplyr::select(
+      dependent_var = input$y_var,
+      input$x_vars) %>% 
+    mutate_if(is.character, as.factor) %>% 
+    drop_na()
+  })
+  
+
 ################### INTRODUCE THE SECOND APP CODE ###############
 ####### N/B: Initially we had two apps; one for linear regression models and time series models
 ######## and another one for IV regression and machine learning models ###########
@@ -67,14 +89,8 @@ server <- function(input, output, session) {
       return('Please upload a file and specify the portion for the training set')
     }else if(!is.null(input$file) & input$prop > 0){
       
-      dat <- input_dataset() %>% 
-        dplyr::select(
-          dependent_var = input$y_var,
-          input$x_vars) %>% 
-        mutate_if(is.character, as.factor) %>% 
-        drop_na()
       
-      data_split <- initial_split(dat, prop = input$prop)
+      data_split <- initial_split(dat(), prop = input$prop)
       
       train <- training(data_split)
     }
@@ -83,14 +99,8 @@ server <- function(input, output, session) {
   
   test <- reactive({
     set.seed(123)
-    dat <- input_dataset() %>% 
-      dplyr::select(
-        dependent_var = input$y_var,
-        input$x_vars) %>% 
-      mutate_if(is.character, as.factor) %>% 
-      drop_na()
-    
-    data_split <- initial_split(dat, prop = input$prop)
+ 
+    data_split <- initial_split(dat(), prop = input$prop)
     
     test <- testing(data_split)
   })
@@ -209,7 +219,7 @@ server <- function(input, output, session) {
     test() %>%
       dplyr::select(dependent_var) %>%
       dplyr::bind_cols(
-        predict(forest_fit(), new_data = test())
+        stats::predict(forest_fit(), new_data = test())
       )
     
   )
@@ -217,7 +227,7 @@ server <- function(input, output, session) {
   preds3_df <- reactive({
     
     predictions <- svm_fit() %>%
-      predict(test())
+      stats::predict(test())
     
     test() %>%
       dplyr::select(dependent_var) %>%
@@ -235,14 +245,15 @@ server <- function(input, output, session) {
       
       # Make predictions on the testing data
       predictions <- tree_fit() %>%
-        predict(test()) %>%
+        stats::predict(test()) %>%
         pull(.pred)
       
       #Calculate RMSE and R-squared
+      
       metrics <- metric_set(rmse, rsq)
       model_performance <- test() %>%
         dplyr::mutate(predictions = predictions) %>%
-        metrics(truth = test()$dependent_var, estimate = predictions)
+        metrics(truth = dependent_var, estimate = predictions)
       
       model_performance %>% 
         pander::pander()
@@ -261,7 +272,7 @@ server <- function(input, output, session) {
         test() %>%
         dplyr::select(dependent_var) %>%
         bind_cols(
-          predict(forest_fit(), new_data = test())
+          stats::predict(forest_fit(), new_data = test())
         )
       
       # summarize performance
@@ -297,7 +308,7 @@ server <- function(input, output, session) {
       metrics <- metric_set(rmse, rsq)
       model_performance <- test() %>%
         dplyr::mutate(predictions = predictions) %>%
-        metrics(truth = test()$dependent_var, estimate = predictions)
+        metrics(truth = dependent_var, estimate = predictions)
       
       model_performance %>% 
         pander::pander()
@@ -400,10 +411,30 @@ server <- function(input, output, session) {
     }
   )
   
+  #download a report in pdf format: am only downloading reports related to model 1 and model 2,
+  #but other model reports can as well be included.
+  
+  
+  output$model_report <- downloadHandler(
+    filename = function() {
+      paste0("model-report_", Sys.Date(), ".pdf")
+    },
+    content = function(file) {
+      rmarkdown::render("reports/report.Rmd",
+                        output_file = file,
+                        params = list(
+                          title = "Model Report",
+                          mod1 = fit1(),
+                          mod2 = fit2()
+                          
+                        ),
+                        envir = new.env(),
+                        intermediates_dir = tempdir())
+    }
+  )
   
 ###### END OF THE SECOND APP: IV regression and machine learning models ###
  
-  
   
   
   #### Rendering the raw data and the log transformed data sets
@@ -431,13 +462,13 @@ server <- function(input, output, session) {
     }
   )
   
-  ### First multiple linear regression: Fit this based on training set
+  ### First multiple linear regression: 
   
   fit1 <- reactive({
     
-    if(input$prop < 0) {
+    if(input$run1 < 0) {
       return("Please select your data first and choose proportion for training set!")
-    }else if(!is.null(input$file) & input$run1 > 0 & input$prop > 0){
+    }else if(!is.null(input$file) & input$run1 > 0){
       
       
       #Ensure that the user is selecting the correct dependent variable
@@ -449,7 +480,7 @@ server <- function(input, output, session) {
       }
       check
       
-      fit1 <- lm(dependent_var ~ ., data = train())
+      fit1 <- lm(dependent_var ~ ., data = dat())
     }
     
   } )
@@ -462,9 +493,7 @@ server <- function(input, output, session) {
     }else if(!is.null(input$file) & input$run2 > 0 & input$run1 > 0){
       std_error = summary(fit1())$sigma
       
-
-      
-      dat3 = train() %>%
+      dat3 = dat() %>%
         dplyr::mutate(residuals = summary(fit1())$residuals,
                       dummy1    = if_else(residuals >= std_error, 1, 0),
                       dummy2    = if_else(residuals < -std_error, 1, 0)) %>% 
@@ -890,7 +919,7 @@ server <- function(input, output, session) {
   
   preds1 <- reactive({
     
-    pred1 = predict(fit1(), new_data = test())
+    pred1 = predict(fit1(), new_data = dat())
     
     
     preds1 = test() %>%
@@ -900,15 +929,10 @@ server <- function(input, output, session) {
   
   preds2 <- reactive({
     
-    pred = predict(fit2(), new_data = test())
-    
-    # dat2_ <- input_dataset() %>% 
-    #   dplyr::select(
-    #     input$y_var) %>% 
-    #   drop_na() 
+    pred = stats::predict(fit2(), new_data = dat())
     
     
-    preds2 = train() %>%
+    preds2 = dat() %>%
       dplyr::mutate(preds = pred)
     
   })
@@ -1137,31 +1161,32 @@ server <- function(input, output, session) {
   )
   
   
+  
   ####pred vs actual data sets for use in plotting the graphs
   
   dat1_ <- reactive({
     
-    pred1 = predict(fit1(), new_data = test())
+    pred1 = stats::predict(fit1(), new_data = dat())
     
     
-    dat1 = train() %>%
+    dat1 = dat() %>%
       dplyr::mutate(preds = pred1,
-                    x = seq(1:nrow(train())))
+                    x = seq(1:nrow(dat())))
   })
   
   dat2_ <- reactive({
     
-    pred = predict(fit2(), new_data = test())
+    pred = stats::predict(fit2(), new_data = dat())
     std_error = summary(fit1())$sigma
     
   
-    dat3 = train() %>%
+    dat3 = dat() %>%
       dplyr::mutate(residuals = summary(fit1())$residuals,
                     dummy1    = if_else(residuals >= std_error, 1, 0),
                     dummy2    = if_else(residuals < -std_error, 1, 0)) %>%
       dplyr::select(-residuals) %>%
       dplyr::mutate(preds = pred,
-                    x = seq(1:nrow(train())))
+                    x = seq(1:nrow(dat())))
   })
   
   #model summary1
@@ -1169,9 +1194,9 @@ server <- function(input, output, session) {
   output$model_summary1 <- renderPrint({
     req(input_dataset())
     
-    if(input$prop < 0){
+    if(input$run1 < 0){
       return(cat("Please run the model first!"))
-    }else if(input$run1 > 0 & input$prop > 0){
+    }else if(input$run1 > 0){
       cat("Multiple linear regression without dummy variables \n")
       fit1() %>% 
         broom::tidy() %>% 
@@ -1188,13 +1213,13 @@ server <- function(input, output, session) {
   output$hetero <- renderPrint({
     req(input_dataset())
     
-    if(input$run1 < 0 & input$prop < 0){
+    if(input$run1 < 0){
       return(cat("Please run the model first!"))
     }else{
       if (is.null(input$x_vars) | is.null(input$file)) {
         return(cat("Select at least one predictor to test for heteroscedaciticity"))
       } 
-      else if(!is.null(input$x_vars) & input$run1 > 0 & input$prop > 0)
+      else if(!is.null(input$x_vars) & input$run1 > 0)
       {
         cat("Test for heteroscedasticity  \n")
         bptest(fit1())
@@ -1206,13 +1231,13 @@ server <- function(input, output, session) {
   
   output$multi <- renderPrint({
     
-    if(input$run1 < 0 & input$prop < 0 & input$prop < 0){
+    if(input$run1 < 0 ){
       return("Please run the model first!")
     }else {
       if (length(input$x_vars) < 2 & is.null(input$file)) {
         return(cat("Please select your data and run the model first!"))
       } 
-      else if(!is.null(input$x_vars) & input$run1 > 0 & input$prop > 0)
+      else if(!is.null(input$x_vars) & input$run1 > 0)
       {
         cat("Test for multicollinearity: Any VIF more than 10 indicate issues with multicollinearity \n")
         
@@ -1231,9 +1256,9 @@ server <- function(input, output, session) {
   output$auto <- renderPrint({
     
     #perform Durbin-Watson test
-    if(is.null(input$file) & input$run1 < 0 & input$prop < 0){
+    if(is.null(input$file) & input$run1 < 0 ){
       return(cat("Please select your data and run the model first!"))
-    }else if(!is.null(input$file) & input$run1 > 0 & input$prop > 0){
+    }else if(!is.null(input$file) & input$run1 > 0 ){
       cat("Test for autocorrelation with Durban Watson statistic \n")
       durbinWatsonTest(fit1())
     }
@@ -1241,9 +1266,9 @@ server <- function(input, output, session) {
   
   output$correct1 <- renderPrint(
     
-    if(input$run1 < 0 & input$prop < 0){
+    if(input$run1 < 0 ){
       return("")
-    }else if(input$run1 > 0 & input$prop > 0){
+    }else if(input$run1 > 0 ){
       fit1() %>% 
         cochrane.orcutt()
     }
@@ -1481,7 +1506,6 @@ server <- function(input, output, session) {
   #Time series plot
   output$plot2 <- renderPlot({
     #use ggplot for an elegant graph
-  
     
     mts() %>% 
       ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""), 
