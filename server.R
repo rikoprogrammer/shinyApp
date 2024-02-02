@@ -1,9 +1,6 @@
 
 
-
 server <- function(input, output, session) {
-  
-
   
   input_dataset <- reactive(
     
@@ -547,9 +544,9 @@ server <- function(input, output, session) {
     }else if(!is.null(input$file) & input$run4 > 0){
       
       
-      intercept_only = lm(dependent_var ~ 1, data = train())
+      intercept_only = lm(dependent_var ~ 1, data = dat())
 
-      model_all = lm(dependent_var ~ ., data = train())
+      model_all = lm(dependent_var ~ ., data = dat())
 
       forward_fit = stats::step(intercept_only, direction='forward', scope=formula(model_all),
                          trace=0)
@@ -564,12 +561,14 @@ server <- function(input, output, session) {
     }else if(!is.null(input$file) & input$run5 > 0) {
      
       
-      full_mod = lm(dependent_var ~., data = train())
+      full_mod = lm(dependent_var ~., data = dat())
       backward_fit = MASS::stepAIC(full_mod, direction = "backward", trace = FALSE)
     }
   }
   )
   
+  
+  #Transformed data sets
   
   tr_data <- reactive(
     
@@ -577,8 +576,6 @@ server <- function(input, output, session) {
       dplyr::select(input$tr_vars) %>% 
       drop_na()
   )
-  
-  #Transformed data sets
   
   log_data <- reactive({
     
@@ -701,6 +698,7 @@ server <- function(input, output, session) {
   )
   
   #Time series models
+  
   
   ts_df <- reactive({
     
@@ -922,47 +920,46 @@ server <- function(input, output, session) {
     pred1 = predict(fit1(), new_data = dat())
     
     
-    preds1 = test() %>%
+    preds1 = input_dataset() %>%
+      dplyr::select(1, input$y_var, input$x_vars) %>% 
+      drop_na() %>% 
       dplyr::mutate(preds = pred1)
     
   })
+  
   
   preds2 <- reactive({
     
     pred = stats::predict(fit2(), new_data = dat())
     
     
-    preds2 = dat() %>%
+    preds2 = input_dataset() %>%
+      dplyr::select(1, input$y_var, input$x_vars) %>% 
+      drop_na() %>% 
       dplyr::mutate(preds = pred)
     
   })
   
   preds_forward <- reactive({
     
-    pred = predict(forward_fit(), new_data = test())
-    
-    # dat2_ <- input_dataset() %>% 
-    #   dplyr::select(
-    #     input$y_var) %>% 
-    #   drop_na() 
+    pred = predict(forward_fit(), new_data = dat())
     
     
-    preds_forward = train() %>%
+    preds_forward = input_dataset() %>%
+      dplyr::select(1, input$y_var, input$x_vars) %>% 
+      drop_na() %>% 
       dplyr::mutate(preds = pred)
     
   })
   
   preds_back <- reactive({
     
-    pred = predict(backward_fit(), new_data = test())
-    
-    # dat2_ <- input_dataset() %>% 
-    #   dplyr::select(
-    #     input$y_var) %>% 
-    #   drop_na() 
+    pred = predict(backward_fit(), new_data = dat())
     
     
-    preds_back = train() %>%
+    preds_back = input_dataset() %>%
+      dplyr::select(1, input$y_var, input$x_vars) %>% 
+      drop_na() %>% 
       dplyr::mutate(preds = pred)
     
   })
@@ -1159,7 +1156,6 @@ server <- function(input, output, session) {
       write.csv(preds_time2(), file, row.names = FALSE)
     }
   )
-  
   
   
   ####pred vs actual data sets for use in plotting the graphs
