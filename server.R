@@ -931,12 +931,16 @@ server <- function(input, output, session) {
   preds2 <- reactive({
     
     pred = stats::predict(fit2(), new_data = dat())
-    
+    std_error = summary(fit1())$sigma
     
     preds2 = input_dataset() %>%
       dplyr::select(1, input$y_var, input$x_vars) %>% 
       drop_na() %>% 
-      dplyr::mutate(preds = pred)
+      dplyr::mutate(preds = pred,
+                    residuals = summary(fit1())$residuals,
+                    dummy1    = if_else(residuals >= std_error, 1, 0),
+                    dummy2    = if_else(residuals < -std_error, 1, 0)) %>% 
+      dplyr::select(-residuals)
     
   })
   
