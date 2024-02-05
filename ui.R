@@ -79,28 +79,25 @@ ui <- page_sidebar(
                              navbarMenu("Model Results",
 
                                         tabpanFun2(title = "Model results - First model",id1 = "model_summary1", id3 = "hetero", id4 = "multi", id5 = "auto",
-                                                   id6 = "correct1", id7 = "downloadPreds1", id8 = "downloadCoef1", id9 = 'model_report',
-                                                   run_id = "run1"),
+                                                   id6 = "correct1", run_id = "run1"),
 
                                         tabpanFun2(title = "Model results - Second model",id1 = "model_summary2", id3 = "hetero2", id4 = "multi2", id5 = "auto2",
-                                                   id6 = "correct2",id7 = "downloadPreds2", id8 = "downloadCoef2", run_id = "run2"),
+                                                   id6 = "correct2", run_id = "run2"),
 
                                         tabpanFun2(title = "Model results - Ridge Regression",
-                                                   id1 = "model_summary3", id2 = "metrics3", id7 = "downloadPreds3", run_id = "run3"),
+                                                   id1 = "model_summary3", id2 = "metrics3", run_id = "run3"),
                                         
-                                        tabpanFun2(title = "Forward  elimination method", id1 = "forward_results",
-                                                   id7 = "downloadPreds4", id8 = "downloadCoef4", run_id = "run4"),
+                                        tabpanFun2(title = "Forward  elimination method", id1 = "forward_results", run_id = "run4"),
                                         
-                                        tabpanFun2(title = "Backward elimination method", id1 = "back_results",
-                                                   id7 = "downloadPreds5", id8 = "downloadCoef5", run_id = "run5")
+                                        tabpanFun2(title = "Backward elimination method", id1 = "back_results", run_id = "run5")
                              ),
 
                              navbarMenu("Time series models",
 
-                                        tabpanFun2(title = "Time series model", id1 = "model_summary4", id7 = "downloadPreds6", run_id = "run6"),
+                                        tabpanFun2(title = "Time series model", id1 = "model_summary4", run_id = "run6"),
                     
                                        
-                                        tabpanFun2(title = "Time series model with lag 1", id1 = "model_summary5", id7 = "downloadPreds7", run_id = "run7"),
+                                        tabpanFun2(title = "Time series model with lag 1", id1 = "model_summary5", run_id = "run7"),
                                         tabPanel(
                                           title = "Time series model: KOYCK",
                                           
@@ -115,8 +112,8 @@ ui <- page_sidebar(
                                           
                                           
                                         ),
-                                        tabpanFun2(title = "Time series model: VAR", id1 = "model_summary7", id7 = "downloadPreds9",  run_id = "run9"),
-                                        tabpanFun2(title = "Time series model: VECM", id1 = "model_summary8",id7 = "downloadPreds10", run_id = "run10")
+                                        tabpanFun2(title = "Time series model: VAR", id1 = "model_summary7",  run_id = "run9"),
+                                        tabpanFun2(title = "Time series model: VECM", id1 = "model_summary8", run_id = "run10")
                              ),
                              
                              
@@ -187,6 +184,13 @@ ui <- page_sidebar(
                                 verbatimTextOutput("iv_summary")
                               
                              ),
+                             tabPanel(
+                               title = "Download Reports",
+                               downloadButton("dw3_","Download coefficients"),
+                               downloadButton("dw4_","Download Predictions"),
+                               downloadButton("dw5_","Download a pdf report")
+                               
+                             )
                   )     
                   )
                 

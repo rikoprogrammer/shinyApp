@@ -33,7 +33,10 @@ library(vars)
 library(tsDyn)
 library(bslib)
 library(thematic)
+library(xlsx)
 
+oldOpt <- options()
+options(xlsx.date.format="dd MMM, yyyy")
 
 
 #  a helper function to generate multiple select input statements in the UI
@@ -64,7 +67,7 @@ tabpanFun1 <- function(id, id2 = NULL, label, label2 = "Download Me!", OutputId,
 
 #A helper function for generating tab sets for various models
 
-tabpanFun2 <- function(title, label1 = "Predictions", label2 = "Coefficients", id1 = NULL, 
+tabpanFun2 <- function(title, id1 = NULL, 
                        id2 = NULL, id3 = NULL, id4 = NULL, id5 = NULL, id6 = NULL, 
                        id7 = NULL,id8=NULL, id9=NULL, run_id = NULL, ...) {
   
@@ -76,11 +79,7 @@ tabpanFun2 <- function(title, label1 = "Predictions", label2 = "Coefficients", i
     verbatimTextOutput(id3),
     verbatimTextOutput(id4),
     verbatimTextOutput(id5),
-    verbatimTextOutput(id6),
-    downloadButton(id7, label1),
-    downloadButton(id8, label2),
-    downloadButton(id9, label = 'download report')
-    
+    verbatimTextOutput(id6)
     
   )
 }

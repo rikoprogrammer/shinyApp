@@ -206,7 +206,7 @@ server <- function(input, output, session) {
     test() %>%
       dplyr::select(dependent_var) %>%
       dplyr::bind_cols(
-        predict(tree_fit(), new_data = test())
+        stats::predict(tree_fit(), new_data = test())
       )
     
   )
@@ -335,7 +335,7 @@ server <- function(input, output, session) {
         test() %>%
         dplyr::select(dependent_var) %>%
         bind_cols(
-          predict(forest_fit(), new_data = test())
+          stats::predict(forest_fit(), new_data = test())
         )
       
       test_results 
@@ -397,22 +397,22 @@ server <- function(input, output, session) {
     }
   )
   
-  output$dw3 <- downloadHandler(
-    
-    filename = function() {
-      paste("IV_coefs", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(coefs_iv(), file)
-    }
-  )
+  # output$dw3 <- downloadHandler(
+  #   
+  #   filename = function() {
+  #     paste("IV_coefs", ".csv", sep = "")
+  #   },
+  #   
+  #   content = function(file) {
+  #     write.csv(coefs_iv(), file)
+  #   }
+  # )
   
   #download a report in pdf format: am only downloading reports related to model 1 and model 2,
   #but other model reports can as well be included.
   
   
-  output$model_report <- downloadHandler(
+  output$dw5_ <- downloadHandler(
     filename = function() {
       paste0("model-report_", Sys.Date(), ".pdf")
     },
@@ -519,9 +519,9 @@ server <- function(input, output, session) {
       return(cat("Please select your data and run the model first!"))
     }else if(!is.null(input) & input$run3 > 0){
       
-      y = train()$dependent_var
+      y = data_ridge()$dependent_var
       
-      x = train() %>% 
+      x = data_ridge() %>% 
         dplyr::select(input$x_vars) %>% 
         data.matrix()
       
@@ -888,28 +888,28 @@ server <- function(input, output, session) {
     
     fit1() %>% 
       broom::tidy() %>% 
-      as_tibble()
+      as.data.frame()
   )
   
   coefficients2 <- reactive(
     
     fit2() %>% 
       broom::tidy() %>% 
-      as_tibble()
+      as.data.frame()
   )
   
   coefficients4 <- reactive(
     
     forward_fit() %>% 
       broom::tidy() %>% 
-      as_tibble()
+      as.data.frame()
   )
   
   coefficients5 <- reactive(
     
     backward_fit() %>% 
       broom::tidy() %>% 
-      as_tibble()
+      as.data.frame()
   )
   
   
@@ -917,20 +917,21 @@ server <- function(input, output, session) {
   
   preds1 <- reactive({
     
-    pred1 = predict(fit1(), new_data = dat())
+    pred1 = stats::predict(fit1())
     
     
     preds1 = input_dataset() %>%
       dplyr::select(1, input$y_var, input$x_vars) %>% 
       drop_na() %>% 
-      dplyr::mutate(preds = pred1)
+      dplyr::mutate(preds = pred1) %>% 
+      as.data.frame()
     
   })
   
   
   preds2 <- reactive({
     
-    pred = stats::predict(fit2(), new_data = dat())
+    pred = stats::predict(fit2())
     std_error = summary(fit1())$sigma
     
     preds2 = input_dataset() %>%
@@ -940,31 +941,34 @@ server <- function(input, output, session) {
                     residuals = summary(fit1())$residuals,
                     dummy1    = if_else(residuals >= std_error, 1, 0),
                     dummy2    = if_else(residuals < -std_error, 1, 0)) %>% 
-      dplyr::select(-residuals)
+      dplyr::select(-residuals) %>% 
+      as.data.frame()
     
   })
   
   preds_forward <- reactive({
     
-    pred = predict(forward_fit(), new_data = dat())
+    pred = stats::predict(forward_fit())
     
     
     preds_forward = input_dataset() %>%
       dplyr::select(1, input$y_var, input$x_vars) %>% 
       drop_na() %>% 
-      dplyr::mutate(preds = pred)
+      dplyr::mutate(preds = pred) %>% 
+      as.data.frame()
     
   })
   
   preds_back <- reactive({
     
-    pred = predict(backward_fit(), new_data = dat())
+    pred = stats::predict(backward_fit())
     
     
     preds_back = input_dataset() %>%
       dplyr::select(1, input$y_var, input$x_vars) %>% 
       drop_na() %>% 
-      dplyr::mutate(preds = pred)
+      dplyr::mutate(preds = pred) %>% 
+      as.data.frame()
     
   })
   
@@ -972,13 +976,13 @@ server <- function(input, output, session) {
   
   preds_ridge <- reactive({
     
-    y = train()$dependent_var
+    y = data_ridge()$dependent_var
     
-    x = train() %>% 
+    x = data_ridge() %>% 
       dplyr::select(input$x_vars) %>% 
       data.matrix()
     
-    x_test = test() %>% 
+    x_test = data_ridge() %>% 
       dplyr::select(input$x_vars) %>% 
       data.matrix()
     
@@ -990,16 +994,12 @@ server <- function(input, output, session) {
     
     fit_ridge <- glmnet(x, y, alpha = 0, lambda = best_lambda)
     
-    pred = predict(fit_ridge(), s = best_lambda, newx = x_test)
+    pred = glmnet::predict.glmnet(fit_ridge(), s = best_lambda, newx = x_test)
+  
     
-    dat2_ <- test() %>% 
-      # dplyr::select(
-      #   input$y_var) %>% 
-      drop_na() 
-    
-    
-    preds_ridge = dat2_ %>%
-      dplyr::mutate(preds = pred)
+    preds_ridge = data_ridge() %>%
+      dplyr::mutate(preds = pred) %>% 
+      as.data.frame()
     
   })
   
@@ -1007,7 +1007,7 @@ server <- function(input, output, session) {
   
   preds_time <- reactive({
     
-    pred = forecast(ts_fit())
+    pred = forecast::forecast(ts_fit())
     y = as.numeric(pred$fitted)
     
     dat2_ <- input_dataset() %>% 
@@ -1017,13 +1017,14 @@ server <- function(input, output, session) {
     
     
     preds_time = dat2_ %>%
-      dplyr::mutate(preds = y)
+      dplyr::mutate(preds = y) %>% 
+      as.data.frame()
     
   })
   
   preds_time2 <- reactive({
     
-    pred = forecast(ts_fit2())
+    pred = forecast::forecast(ts_fit2())
     y = as.numeric(pred$fitted)
     
     dat2_ <- input_dataset() %>% 
@@ -1033,131 +1034,104 @@ server <- function(input, output, session) {
     
     
     preds_time2 = dat2_ %>%
-      dplyr::mutate(preds = y)
+      dplyr::mutate(preds = y) %>% 
+      as.data.frame()
     
   })
   
   
   ###Download Handlers
   
-  output$downloadCoef1 <- downloadHandler(
+  # output$downloadCoef1 <- downloadHandler(
+  # 
+  #   filename = function() {
+  #     paste("coefficients1", ".xlsx", sep = "")
+  #   },
+  # 
+  #   content = function(file) {
+  #     #write.csv(coefficients1(), file, row.names = FALSE)
+  #     write.xlsx2(coefficients1(), file, sheetName = 'model1_coefficients',
+  #                 row.names = FALSE)
+  #    write.xlsx2(coefficients2(), file, sheetName = 'model2_coefficients',
+  #                 row.names = FALSE, append = TRUE)
+  #    coefs_iv()
+  #     
+  #   }
+  #   
+  # )
+  
+   output$dw3_ <- downloadHandler(
 
     filename = function() {
-      paste("coefficients1", ".csv", sep = "")
+      paste("coefficients", ".xlsx", sep = "")
     },
 
     content = function(file) {
-      write.csv(coefficients1(), file, row.names = FALSE)
+      
+     write.xlsx2(coefficients1(), file, sheetName = 'model1_coefficients',
+                  row.names = FALSE)
+      
+     write.xlsx2(coefficients2(), file, sheetName = 'model2_coefficients',
+                  row.names = FALSE, append = TRUE)
+     
+     write.xlsx2(coefficients4(), file, sheetName = 'coef_forward_elimination',
+                 row.names = FALSE, append = TRUE)
+     
+     write.xlsx2(coefficients5(), file, sheetName = 'coef_backward_elimination',
+                 row.names = FALSE, append = TRUE)
+
+     # write.xlsx2(coefs_iv(), file, sheetName = 'coef_IV_regression',
+     #             row.names = FALSE, append = TRUE)
+      
     }
+    
   )
 
   
-  output$downloadCoef2 <- downloadHandler(
-    
-    filename = function() {
-      paste("coefficients2", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(coefficients2(), file, row.names = FALSE)
-    }
-  )
   
-  output$downloadCoef4 <- downloadHandler(
+  output$dw4_ <- downloadHandler(
     
     filename = function() {
-      paste("coefficients4", ".csv", sep = "")
+      paste("predictions", ".xlsx", sep = "")
     },
     
     content = function(file) {
-      write.csv(coefficients4(), file, row.names = FALSE)
-    }
-  )
-  
-  output$downloadCoef5 <- downloadHandler(
-    
-    filename = function() {
-      paste("coefficients5", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(coefficients5(), file, row.names = FALSE)
-    }
-  )
-  output$downloadPreds1 <- downloadHandler(
-    
-    filename = function() {
-      paste("preds1_mod1", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(preds1(), file, row.names = FALSE)
-    }
-  )
-  
-  output$downloadPreds2 <- downloadHandler(
-    
-    filename = function() {
-      paste("preds2", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(preds2(), file, row.names = FALSE)
-    }
-  )
-  
-  output$downloadPreds3 <- downloadHandler(
-    
-    filename = function() {
-      paste("preds_ridge", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(preds_ridge(), file, row.names = FALSE)
-    }
-  )
-  
-  output$downloadPreds4 <- downloadHandler(
-    
-    filename = function() {
-      paste("preds_forward", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(preds_forward(), file, row.names = FALSE)
-    }
-  )
-  
-  output$downloadPreds5 <- downloadHandler(
-    
-    filename = function() {
-      paste("preds_back", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(preds_back(), file, row.names = FALSE)
-    }
-  )
-  
-  output$downloadPreds6 <- downloadHandler(
-    
-    filename = function() {
-      paste("preds_time", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(preds_time(), file, row.names = FALSE)
-    }
-  )
-  
-  output$downloadPreds7 <- downloadHandler(
-    
-    filename = function() {
-      paste("preds_time_lag", ".csv", sep = "")
-    },
-    
-    content = function(file) {
-      write.csv(preds_time2(), file, row.names = FALSE)
+      
+      if(!is.null(preds1())){
+        write.xlsx2(preds1(), file, sheetName = 'model1_predictions',
+                    row.names = FALSE)
+      }
+      
+      if(!is.null(preds2())){
+        write.xlsx2(preds2(), file, sheetName = 'model2_predictions',
+                    row.names = FALSE, append = TRUE)
+      }
+      
+      if(!is.null(preds_ridge())){
+        write.xlsx2(preds_ridge(), file, sheetName = 'ridge_predictions',
+                    row.names = FALSE, append = TRUE)
+      }
+      
+      if(!is.null(preds_forward())){
+        write.xlsx2(preds_forward(), file, sheetName = 'forward_model_predictions',
+                    row.names = FALSE, append = TRUE)
+      }
+       
+      if(!is.null(preds_back())){
+        write.xlsx2(preds_back(), file, sheetName = 'backward_model_predictions',
+                    row.names = FALSE, append = TRUE)
+      }
+      
+      if(!is.null(preds_time())){
+        write.xlsx2(preds_time(), file, sheetName = 'timeseries_model1_predictions',
+                    row.names = FALSE, append = TRUE)
+      }
+      
+      if(!is.null(preds_time2())){
+        write.xlsx2(preds_time2(), file, sheetName = 'timeseries_model2_predictions',
+                    row.names = FALSE, append = TRUE)
+      }
+      
     }
   )
   
