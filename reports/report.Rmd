@@ -4,10 +4,15 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   pdf_document: default
   html_document: default
+geometry: 'left=2cm, right=2cm, top=2cm, bottom=2cm'
 params:
   title: Model Report
   mod1: null
   mod2: null
+  mod3: null
+  mod4: null
+  mod5: null
+  plot: null
 ---
 
 
@@ -29,13 +34,14 @@ knitr::opts_chunk$set(
 ## Model one report: Linear regression model without the dummy variables
 
 
-
 ```{r}
 
-params$mod1$coefficients
+#params$mod1$coefficients
 
+if(!is.null(params$mod1)){
+  params$mod1 %>% summary() %>% broom::tidy() %>% pander::pander()
+}
 
-params$mod1 %>% summary() %>% broom::tidy() %>% pander::pander()
 
 ```
 
@@ -43,10 +49,64 @@ params$mod1 %>% summary() %>% broom::tidy() %>% pander::pander()
 
 
 ```{r}
-params$mod2$coefficients
 
+#params$mod2$coefficients
 
-params$mod2 %>% summary() %>% broom::tidy() %>% pander::pander()
+if(!is.null(params$mod2)){
+  params$mod2 %>% summary() %>% broom::tidy() %>% pander::pander()
+}
+
 
 ```
+
+## Model three: Ridge regression results
+
+```{r}
+
+if(!is.null(params$mod3)){
+  
+  coef(params$mod3) %>% 
+  as.matrix() %>% 
+  knitr::kable()
+}
+
+
+```
+
+## Model four: Forward elimination method
+
+```{r}
+if(!is.null(params$mod4)){
+  params$mod4 %>% summary() %>% broom::tidy() %>% pander::pander()
+}
+
+```
+
+
+## Model five: Backward elimination method
+
+```{r}
+
+if(!is.null(params$mod5)){
+  params$mod5 %>% summary() %>% broom::tidy() %>% pander::pander()
+}
+
+```
+
+
+## Time series visualizations
+
+```{r, fig.align='center', fig.width=7}
+
+if(!is.null(params$plot)){
+  params$plot
+}
+
+
+```
+
+
+
+
+
 

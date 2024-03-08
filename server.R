@@ -391,7 +391,11 @@ server <- function(input, output, session) {
                         params = list(
                           title = "Model Report",
                           mod1 = fit1(),
-                          mod2 = fit2()
+                          mod2 = fit2(),
+                          mod3 = fit_ridge(),
+                          mod4 = forward_fit(),
+                          mod5 = backward_fit(),
+                          plot = ts_plot()
                           
                         ),
                         envir = new.env(),
@@ -1448,13 +1452,52 @@ server <- function(input, output, session) {
   })
   
   #Time series plot
-  output$plot2 <- renderPlot({
-    #use ggplot for an elegant graph
+  
+  ts_plot <- reactive(
     
-    mts() %>% 
-      ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""), 
-                  theme = theme_economist())
+    #use ggplot for an elegant graph
+      mts() %>% 
+        ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""), 
+                    plot.type = 'histogram', 
+                    ylab = input$y_var, theme = theme_economist())
+   
+  )
+  
+  
+  output$plot2 <- renderPlot({
+    
+    ts_plot()
+  })
+
+  
+  ######### SAVING VARIOUS DATA SETS TO THE DATA BASE
+  
+  con <- reactive({
+    
+    con <- dbConnect(RMySQL::MySQL(),
+                    dbname='google_trends',
+                    host="173.255.233.251",
+                    port=3306,
+                    user='root',
+                    password='Mngt98HY!df^7h')
+    
+    
+    
+    # Close the connection
+ 
+    on.exit(dbDisconnect(db))
   })
   
+  save <- reactive(
+    
+    if(!is.null(preds()) & input$db > 0){
+      
+      # Save the data to MySQL
+      dbWriteTable(con(), name = preds1(), value = my_data, append = FALSE)
+      
+      save
+    }
+   
+  )
  
 }

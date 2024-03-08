@@ -185,10 +185,13 @@ ui <- page_sidebar(
                               
                              ),
                              tabPanel(
+                            
                                title = "Download Reports",
+
                                downloadButton("dw3_","Download coefficients"),
                                downloadButton("dw4_","Download Predictions"),
-                               downloadButton("dw5_","Download a pdf report")
+                               downloadButton("dw5_","Download a pdf report"),
+                               actionButton('db', 'Save to data base')
                                
                              )
                   )     
