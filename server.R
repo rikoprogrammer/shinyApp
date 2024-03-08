@@ -1472,14 +1472,16 @@ server <- function(input, output, session) {
   
   ######### SAVING VARIOUS DATA SETS TO THE DATA BASE
   
+  source('secrets.R')
+  
   con <- reactive({
     
     con <- dbConnect(RMySQL::MySQL(),
-                    dbname='google_trends',
-                    host="173.255.233.251",
-                    port=3306,
-                    user='root',
-                    password='Mngt98HY!df^7h')
+                    dbname = 'google_trends',
+                    host = options()$mysql$host,
+                    port = options()$mysql$port,
+                    user = options()$mysql$user,
+                    password = options()$mysql$password)
     
     
     
@@ -1488,16 +1490,31 @@ server <- function(input, output, session) {
     on.exit(dbDisconnect(db))
   })
   
-  save <- reactive(
+  # save <- reactive(
+  #   
+  #   if(!is.null(preds1()) & input$db > 0){
+  #     
+  #     # Save the data to MySQL
+  #     dbWriteTable(con(), name = 'pred_test', value = preds1())
+  #     
+  #   }
+  # 
+  # )
+  
+  output$db <- downloadHandler(
     
-    if(!is.null(preds()) & input$db > 0){
+    filename = function() {
+      paste("preds1_db", sep = "")
+    },
+    
+    content = function(file) {
       
-      # Save the data to MySQL
-      dbWriteTable(con(), name = preds1(), value = my_data, append = FALSE)
-      
-      save
+      if(!is.null(preds1()) & input$db > 0){
+        dbWriteTable(con(), name = 'pred_test', value = preds1())
+      }
     }
-   
   )
- 
+  
+  
+
 }

@@ -191,7 +191,7 @@ ui <- page_sidebar(
                                downloadButton("dw3_","Download coefficients"),
                                downloadButton("dw4_","Download Predictions"),
                                downloadButton("dw5_","Download a pdf report"),
-                               actionButton('db', 'Save to data base')
+                               downloadButton('db', 'Save to data base')
                                
                              )
                   )     
