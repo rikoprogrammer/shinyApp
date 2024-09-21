@@ -208,26 +208,35 @@ server <- function(input, output, session) {
     }
   })
   
-  #prediction data sets
+  
+  #Prediction data sets for machine learning models
   
   preds1_df <- reactive(
     
     if(input$idn1 > 0){
       
-      test() %>%
+      
+      preds1_df = test() %>%
         dplyr::select(dependent_var) %>%
+        as.data.frame() %>% 
         dplyr::bind_cols(
           stats::predict(tree_fit(), new_data = test())
         )
+      
     }
   
   )
   
+
+  
   preds2_df <- reactive(
     
     if(input$idn2 > 0){
-      test() %>%
+      
+      
+      preds2_df =  test() %>%
         dplyr::select(dependent_var) %>%
+        as.data.frame() %>% 
         dplyr::bind_cols(
           stats::predict(forest_fit(), new_data = test())
         )
@@ -237,16 +246,20 @@ server <- function(input, output, session) {
   
   preds3_df <- reactive({
     if(input$idn33 > 0){
+      
       predictions <- svm_fit() %>%
         stats::predict(test())
       
-      test() %>%
+      preds3_df = test() %>%
         dplyr::select(dependent_var) %>%
+        as.data.frame() %>% 
         dplyr::bind_cols(
           predictions
         )
     }
   })
+  
+  
   
   output$metrics1 <- renderPrint({
     
@@ -886,8 +899,11 @@ server <- function(input, output, session) {
   
   #### predicted values vs actual values
   
+    
   preds1 <- reactive({
     
+    if(!is.null(input$file)  & input$run1 > 0){
+      
     pred1 = stats::predict(fit1())
     
     preds1 = input_dataset() %>%
@@ -895,8 +911,10 @@ server <- function(input, output, session) {
       drop_na() %>% 
       dplyr::mutate(preds = pred1) %>% 
       as.data.frame()
-    
+    }
   })
+  
+
   
   
   preds2 <- reactive({
@@ -1471,6 +1489,7 @@ server <- function(input, output, session) {
 
   
   ######### SAVING VARIOUS DATA SETS TO THE DATA BASE
+  ### THIS IS STILL NOT WORKING --- FURTHER WORK IS NEEDED HERE ######
   
   source('secrets.R')
   
@@ -1514,7 +1533,6 @@ server <- function(input, output, session) {
       }
     }
   )
-  
   
 
 }
