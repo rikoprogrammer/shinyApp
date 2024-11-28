@@ -21,10 +21,14 @@ server <- function(input, output, session) {
     }
   ) 
   
+  
   vars2 <- tibble::tribble(
     
-    ~id, ~label,
-    "endo_vars", "endogenous variables", 
+    ~id, ~ label,
+    "y_var", "select continuous outcome variable",
+    "x_vars", "select predictor variables",
+    "tr_vars", "select variables to transform",
+    "endo_vars", "endogenous variables",
     "exo_vars", "exogenous variables",
     "iv_vars", "instrument variables",
   )
@@ -35,27 +39,27 @@ server <- function(input, output, session) {
   
   #observe file being selected
   observeEvent(input$file, {
-    updateSelectInput(session,
-                      inputId = "y_var",
-                      label = "select a continuous dependent variable",
-                      choices = colnames(input_dataset()))
+    # updateSelectInput(session,
+    #                   inputId = "y_var",
+    #                   label = "select a continuous dependent variable",
+    #                   choices = colnames(input_dataset()))
     
     pmap(vars2, updatefun)
     
-    updateSelectInput(session,
-                      inputId = "x_vars",
-                      label = "select predictor variables",
-                      choices = colnames(input_dataset()))
+    # updateSelectInput(session,
+    #                   inputId = "x_vars",
+    #                   label = "select predictor variables",
+    #                   choices = colnames(input_dataset()))
     
     updateSelectInput(session,
                       inputId = "x_vars2",
                       label = "select a single predictor",
                       choices = colnames(input_dataset()))
     
-    updateSelectInput(session,
-                      inputId = "tr_vars",
-                      label = "select variables to transform",
-                      choices = colnames(input_dataset()))
+    # updateSelectInput(session,
+    #                   inputId = "tr_vars",
+    #                   label = "select variables to transform",
+    #                   choices = colnames(input_dataset()))
     
     
   })
@@ -150,6 +154,7 @@ server <- function(input, output, session) {
         )
     }
   })
+  
   
   #Instrument variable regression
   
@@ -468,6 +473,98 @@ server <- function(input, output, session) {
   } )
   
   
+  #Corrections for autocorrelation based on cochrane orcutt
+  
+  fit_coch <- reactive(
+    
+    fit1() %>% 
+      cochrane.orcutt(convergence = 5, max.iter = 1000)
+  )
+  
+  
+  # Make a function that does orcutt transformations, i will use this to 
+  # transform all columns in one pass, thanks to purrr map_df function
+  
+  fun1 <- function(x) {
+    
+    x = x[-1] - x[-12]*fit_coch()$rho
+  }
+  
+  
+ 
+  dat_orcut <- reactive({
+    
+    input_dataset() |> 
+      dplyr::select(
+        dependent_var = input$y_var,
+        input$x_vars ) |> 
+      map_df(fun1) |> 
+      mutate_if(is.character, as.factor) |>  
+      drop_na()
+  })
+  
+
+  dat_diff <- reactive({
+    
+    input_dataset() |> 
+      dplyr::select(
+        dependent_var = input$y_var,
+        input$x_vars ) |> 
+      mutate_if(is.character, as.factor) |>  
+      drop_na() |> 
+      as.matrix() |> 
+      diff() |> 
+      as.data.frame()
+    
+  })
+  
+  
+  fit1_corrected <- reactive({
+    
+    if(input$run1 < 0) {
+      return("Please select your data first and choose proportion for training set!")
+    }else if(!is.null(input$file) & input$run1 > 0){
+      
+      
+      #Ensure that the user is selecting the correct dependent variable
+      
+      check <- get(input$y_var, input_dataset())
+      if (!is.numeric(check)) {
+        validate(paste0("'", input$y_var, 
+                        "' is not a numeric column, please select a numeric column "))
+      }
+      check
+      
+      fit1_corrected <- lm(dependent_var ~ ., data = dat_orcut())
+    }
+    
+  } )
+  
+  #correction for autocorrelation bu using lagged dependent and independent
+  # variable
+  
+  fit1_corrected_d <- reactive({
+    
+    if(input$run1 < 0) {
+      return("Please select your data first and choose proportion for training set!")
+    }else if(!is.null(input$file) & input$run1 > 0){
+      
+      
+      #Ensure that the user is selecting the correct dependent variable
+      
+      check <- get(input$y_var, input_dataset())
+      if (!is.numeric(check)) {
+        validate(paste0("'", input$y_var, 
+                        "' is not a numeric column, please select a numeric column "))
+      }
+      check
+      
+      fit1_corrected_d <- lm(dependent_var ~ ., data = dat_diff())
+    }
+  })
+  
+  
+  
   fit2 <- reactive({
     
     if(is.null(input$file) & input$run2 < 0){
@@ -481,7 +578,30 @@ server <- function(input, output, session) {
                       dummy2    = if_else(residuals < -std_error, 1, 0)) %>% 
         dplyr::select(-residuals) 
       
+      
+      
       fit2 <- lm(dependent_var ~ ., data = dat3)
+    }
+    
+  } )
+  
+  fit2_corrected <- reactive({
+    
+    if(input$run2 < 0) {
+      return("Please select your data first and choose proportion for training set!")
+    }else if(!is.null(input$file) & input$run2 > 0){
+      
+      
+      #Ensure that the user is selecting the correct dependent variable
+      
+      check <- get(input$y_var, input_dataset())
+      if (!is.numeric(check)) {
+        validate(paste0("'", input$y_var, 
+                        "' is not a numeric column, please select a numeric column "))
+      }
+      check
+      
+      fit2_corrected <- lm(dependent_var ~ ., data = dat_orcut())
     }
     
   } )
@@ -815,6 +935,7 @@ server <- function(input, output, session) {
   })
   
   # VARMA model implementation: Not yet implemented!
+  
   
   
   
@@ -1205,7 +1326,7 @@ server <- function(input, output, session) {
       } 
       else if(!is.null(input$x_vars) & input$run1 > 0)
       {
-        cat("Test for multicollinearity: Any VIF more than 10 indicate issues with multicollinearity \n")
+        cat("Test for multicollinearity: Any VIF more than 10 indicate issues with multicollinearity. \n")
         
         vif = car::vif(fit1())
         
@@ -1236,9 +1357,41 @@ server <- function(input, output, session) {
       return("")
     }else if(input$run1 > 0 ){
       fit1() %>% 
-        cochrane.orcutt()
+        cochrane.orcutt(convergence = 5, max.iter = 1000)
     }
   )
+  
+  output$correct_orcutt1 <- renderPrint(
+    
+    if(input$run1 < 0 ){
+      return("")
+    }else if(input$run1 > 0 ){
+      cat('Only consider the results below if there is a problem with autocorrelation, otherwise use the results from the above model.\n')
+      cat("Linear regression results after Cochrane-orcutt correction for autocorrelation.\n")
+      fit1_corrected() |> 
+        broom::tidy() %>% 
+        pander::pander()
+        
+    }
+  )
+  
+  
+  output$correct_diff <- renderPrint(
+    
+    if(input$run1 < 0 ){
+      return("")
+    }else if(input$run1 > 0 ){
+      
+      cat("Linear regression results after first difference (lag1) correction for autocorrelation.\n")
+      fit1_corrected_d() |> 
+        broom::tidy() %>% 
+        pander::pander()
+      
+    }
+  )
+  
+  
+  
   
   #mode2 summary2
   
@@ -1258,6 +1411,22 @@ server <- function(input, output, session) {
       cat("Adjusted R square:",round(summary(fit2())$adj.r.squared, 3))
     }
   })
+  
+  #correction of autocorrelation due to cochrane orcutt
+  
+  output$correct_orcutt2 <- renderPrint(
+    
+    if(input$run2 < 0 ){
+      return("")
+    }else if(input$run2 > 0 ){
+      
+      cat("Linear regression results after Cochrane-orcutt correction\n")
+      fit2_corrected() |> 
+        broom::tidy() %>% 
+        pander::pander()
+      
+    }
+  )
   
   #test for heteroscedaciticity
   
@@ -1312,7 +1481,7 @@ server <- function(input, output, session) {
       return("")
     }else if(input$run2 > 0){
       fit2() %>% 
-        cochrane.orcutt()
+        cochrane.orcutt(convergence = 5, max.iter = 1000)
     }
   )
   
@@ -1474,11 +1643,18 @@ server <- function(input, output, session) {
   ts_plot <- reactive(
     
     #use ggplot for an elegant graph
-      mts() %>% 
-        ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""), 
-                    plot.type = 'histogram', 
+      mts() %>%
+        ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""),
+                    plot.type = 'histogram',
                     ylab = input$y_var, theme = theme_economist())
-   
+      
+    # Had to remove theme because of errors with ggplot2 package, hope this will be fixed in the future
+     
+     # mts() %>% 
+     #    ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""), 
+     #                plot.type = 'histogram', 
+     #                ylab = input$y_var)
+     # 
   )
   
   
@@ -1487,6 +1663,8 @@ server <- function(input, output, session) {
     ts_plot()
   })
 
+  
+  
   
   ######### SAVING VARIOUS DATA SETS TO THE DATA BASE
   ### THIS IS STILL NOT WORKING --- FURTHER WORK IS NEEDED HERE ######
@@ -1519,6 +1697,11 @@ server <- function(input, output, session) {
   #   }
   # 
   # )
+  
+  
+  
+  
+  
   
   output$db <- downloadHandler(
     

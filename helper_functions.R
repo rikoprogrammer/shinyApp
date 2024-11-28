@@ -40,9 +40,13 @@ options(xlsx.date.format="dd MMM, yyyy")
 
 
 #  a helper function to generate multiple select input statements in the UI
+
 vars <- tibble::tribble(
   
   ~id, ~ label, ~ multiple,
+  "y_var", "select continuous outcome variable", FALSE,
+  "x_vars", "select predictor variables", TRUE,
+  "tr_vars", "select variables to transform", TRUE,
   "endo_vars", "endogenous variables", TRUE,
   "exo_vars", "exogenous variables", TRUE,
   "iv_vars", "instrument variables", TRUE,
@@ -79,7 +83,9 @@ tabpanFun2 <- function(title, id1 = NULL,
     verbatimTextOutput(id3),
     verbatimTextOutput(id4),
     verbatimTextOutput(id5),
-    verbatimTextOutput(id6)
+    verbatimTextOutput(id6),
+    verbatimTextOutput(id7),
+    verbatimTextOutput(id8)
     
   )
 }

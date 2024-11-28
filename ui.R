@@ -18,32 +18,24 @@ ui <- page_sidebar(
                 title = "Model Builder: Load Data and Build some Models!",
                 sidebar = sidebar(
                                 fileInput(inputId = "file", accept = c('csv', 'xlsx'),
-                                          label = "Please select an Excel file"),
+                                          label = "Upload Excel/CSV file"),
                                 
                                 numericInput(inputId = "sheet_index",
-                                             label = "Please choose the sheet index to upload",
+                                             label = "Choose sheet index if you uploaded Excel above",
                                              min = 1,
                                              max = 10,
                                              value = 1),
                                 
-                                selectInput(inputId = "y_var",
-                                            label = "select continuous outcome variable",
-                                            choices = "",
-                                            multiple = FALSE),
+                         
                                 
-                                selectInput(inputId = "x_vars",
-                                            label = "select predictor variables",
-                                            choices = "",
-                                            multiple = TRUE),
-                                
-                                selectInput(inputId = "tr_vars",
-                                            label = "select variables to transform",
-                                            choices = "",
-                                            multiple = TRUE),
-                                
+ # The tibble vars and the function 'myselectInput' are defined in the helper_functions.R script
+ 
                                 pmap(vars[1,], mySelectInput),
                                 pmap(vars[2,], mySelectInput),
                                 pmap(vars[3,], mySelectInput),
+                                pmap(vars[4,], mySelectInput),
+                                pmap(vars[5,], mySelectInput),
+                                pmap(vars[6,], mySelectInput),
                                 
                   
                 ),
@@ -79,7 +71,7 @@ ui <- page_sidebar(
                              navbarMenu("Model Results",
 
                                         tabpanFun2(title = "Model results - First model",id1 = "model_summary1", id3 = "hetero", id4 = "multi", id5 = "auto",
-                                                   id6 = "correct1", run_id = "run1"),
+                                                   id6 = "correct1",id7 = "correct_orcutt1", id8 = "correct_diff", run_id = "run1"),
 
                                         tabpanFun2(title = "Model results - Second model",id1 = "model_summary2", id3 = "hetero2", id4 = "multi2", id5 = "auto2",
                                                    id6 = "correct2", run_id = "run2"),
@@ -107,7 +99,7 @@ ui <- page_sidebar(
                                           selectInput(inputId = "x_vars2",
                                                       label = "select a single predictor",
                                                       choices = "",
-                                                      multiple = TRUE),
+                                                      multiple = FALSE),
                                           actionButton("run8", "Click here to run the model"),
                                           
                                           
