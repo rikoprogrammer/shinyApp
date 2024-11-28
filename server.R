@@ -1643,18 +1643,18 @@ server <- function(input, output, session) {
   ts_plot <- reactive(
     
     #use ggplot for an elegant graph
-      mts() %>%
-        ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""),
-                    plot.type = 'histogram',
-                    ylab = input$y_var, theme = theme_economist())
+      # mts() %>%
+      #   ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""),
+      #               plot.type = 'histogram',
+      #               ylab = input$y_var, theme = theme_economist())
       
     # Had to remove theme because of errors with ggplot2 package, hope this will be fixed in the future
      
-     # mts() %>% 
-     #    ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""), 
-     #                plot.type = 'histogram', 
-     #                ylab = input$y_var)
-     # 
+     mts() %>%
+        ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""),
+                    plot.type = 'histogram',
+                    ylab = input$y_var)
+
   )
   
   
