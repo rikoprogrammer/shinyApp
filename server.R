@@ -21,6 +21,25 @@ server <- function(input, output, session) {
     }
   ) 
   
+  input_dataset2 <- reactive(
+    
+    
+    if(is.null(input$file2)) {
+      return("")
+    }else {
+      
+      #allow for both csv and xlsx file uploads
+      
+      ext2 <- tools::file_ext(input$file2$name)
+      switch(ext2,
+             csv  = readr::read_csv(file2 = input$file2$datapath) %>% janitor::clean_names(),
+             xlsx = readxl::read_excel(path = input$file2$datapath, sheet = input$sheet_index) %>% 
+               janitor::clean_names(),
+             validate("Invalid file; Please upload a .csv or .xlsx file")
+      )
+    }
+  ) 
+  
   
   vars2 <- tibble::tribble(
     
@@ -62,7 +81,22 @@ server <- function(input, output, session) {
     #                   choices = colnames(input_dataset()))
     
     
+    updateSelectInput(session,
+                      inputId = "series",
+                      label = "choose a series to interpolate",
+                      choices = colnames(input_dataset2()))
   })
+  
+  
+  #observe file being selected
+  observeEvent(input$file2, {
+    
+    updateSelectInput(session,
+                      inputId = "series",
+                      label = "choose a series to interpolate",
+                      choices = colnames(input_dataset2()))
+  })
+  
   
   
   dat <- reactive({
@@ -938,6 +972,115 @@ server <- function(input, output, session) {
   
   
   
+  # Cubic spline interpolation
+  
+  data_cubic <- reactive({
+    
+   
+    
+    if(is.null(input$file2) & is.null(input$series) & input$run11 < 0) {
+      return("")
+    }else if(!is.null(input$file2) & !is.null(input$series) & input$run11 > 0){
+      
+    req(input_dataset2)
+      
+    
+    input_dataset2() |> 
+      dplyr::select(quarter = 1,
+                    input$series) |> 
+      #ensure Q is replaced with q in the incoming data set
+             mutate(quarter = str_to_lower(quarter),
+                    quarter = as.yearqtr(quarter, format="%Yq%q"),
+                    qvar    = as.Date(quarter))
+    
+ 
+    }
+    
+  })
+  
+  
+  daily <- reactive(
+    
+    seq(data_cubic()$qvar[1], tail(data_cubic()$qvar, 1), 
+        by = 'day')
+    
+  ) 
+  
+  quarterly_data <- reactive(
+    
+    if(is.null(input$file2) & is.null(input$series) & input$run11 < 0) {
+      return("")
+    }else if(!is.null(input$file2) & !is.null(input$series) & input$run11 > 0){
+      
+      data_cubic() |> 
+      dplyr::select(
+        qvar,
+        series = input$series
+      )
+      
+    }
+  )
+  
+  quarterly2 <- reactive(
+    
+    
+    if(is.null(input$file2) & is.null(input$series) & input$run11 < 0) {
+      return("")
+    }else if(!is.null(input$file2) & !is.null(input$series) & input$run11 > 0){
+      
+    data.frame(qvar = daily(),
+               interpolated_values = spline(quarterly_data(),
+                                   method = 'natural',
+                                   xout = daily())$y)
+      
+    }
+  )
+  
+  
+  interpolated_df <- reactive(
+    
+    if(is.null(input$file2) & is.null(input$series) & input$run11 < 0) {
+      return("")
+    }else if(!is.null(input$file2) & !is.null(input$series) & input$run11 > 0){
+      
+    
+    merge(quarterly_data(), quarterly2(), by = 'qvar', all = TRUE)
+      
+    }
+  )
+  
+  output$cubic_dt <- renderDT(
+    
+    if(is.null(input$file2) & is.null(input$series) & input$run11 < 0) {
+      return("")
+    }else if(!is.null(input$file2) & !is.null(input$series) & input$run11 > 0){
+      
+      
+      interpolated_df()
+      
+    }
+  )
+  output$cubic_plot <- renderPlot(
+    
+    if(is.null(input$file2) & is.null(input$series) & input$run11 < 0) {
+      return("")
+    }else if(!is.null(input$file2) & !is.null(input$series) & input$run11 > 0){
+      
+    ggplot() +
+      # geom_line(data = quarterly_data(), aes(x = qvar, y = input$series),
+      #           color = "blue") +
+      geom_line(data = quarterly2(),    aes(x = qvar, y = interpolated_values),
+                color = "red",
+                alpha = 0.8) +
+      labs(title = "A plot for the Interpolated time series",
+           x = "",
+           y = "")
+      
+      
+    }
+    
+  )
+  
   
   #Render the transformed data sets
   
@@ -1669,24 +1812,25 @@ server <- function(input, output, session) {
   ######### SAVING VARIOUS DATA SETS TO THE DATA BASE
   ### THIS IS STILL NOT WORKING --- FURTHER WORK IS NEEDED HERE ######
   
-  source('secrets.R')
   
-  con <- reactive({
-    
-    con <- dbConnect(RMySQL::MySQL(),
-                    dbname = 'google_trends',
-                    host = options()$mysql$host,
-                    port = options()$mysql$port,
-                    user = options()$mysql$user,
-                    password = options()$mysql$password)
-    
-    
-    
-    # Close the connection
- 
-    on.exit(dbDisconnect(db))
-  })
+  # source('secrets.R')
   
+  # con <- reactive({
+  #   
+  #   con <- dbConnect(RMySQL::MySQL(),
+  #                   dbname = 'google_trends',
+  #                   host = options()$mysql$host,
+  #                   port = options()$mysql$port,
+  #                   user = options()$mysql$user,
+  #                   password = options()$mysql$password)
+  #   
+  #   
+  #   
+  #   # Close the connection
+  # 
+  #   on.exit(dbDisconnect(db))
+  # })
+  # 
   # save <- reactive(
   #   
   #   if(!is.null(preds1()) & input$db > 0){

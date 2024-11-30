@@ -31,11 +31,12 @@ ui <- page_sidebar(
  # The tibble vars and the function 'myselectInput' are defined in the helper_functions.R script
  
                                 pmap(vars[1,], mySelectInput),
-                                pmap(vars[2,], mySelectInput),
+                                
                                 pmap(vars[3,], mySelectInput),
                                 pmap(vars[4,], mySelectInput),
                                 pmap(vars[5,], mySelectInput),
                                 pmap(vars[6,], mySelectInput),
+                                pmap(vars[7,], mySelectInput),
                                 
                   
                 ),
@@ -105,7 +106,19 @@ ui <- page_sidebar(
                                           
                                         ),
                                         tabpanFun2(title = "Time series model: VAR", id1 = "model_summary7",  run_id = "run9"),
-                                        tabpanFun2(title = "Time series model: VECM", id1 = "model_summary8", run_id = "run10")
+                                        tabpanFun2(title = "Time series model: VECM", id1 = "model_summary8", run_id = "run10"),
+                                        # tabpanFun2(title = "Cubic spline interpolation for quarterly data", id1 = "cubic", run_id = "run11")
+                                        tabPanel(
+                                          title = "Cubic spline interpolation for quarterly data",
+                                          verbatimTextOutput("cubic"),
+                                          fileInput(inputId = "file2", accept = c('csv', 'xlsx'),
+                                                    label = "Upload quarterly data"),
+                                          pmap(vars[2,], mySelectInput),
+                                          actionButton("run11", "Click here to run the model"),
+                                          DTOutput('cubic_dt'),
+                                          plotOutput('cubic_plot')
+                                          
+                                        )
                              ),
                              
                              
@@ -176,6 +189,25 @@ ui <- page_sidebar(
                                 verbatimTextOutput("iv_summary")
                               
                              ),
+                             
+                             tabPanel(
+                               title = "Simplex Regression",
+                               actionButton("ids3","Click here to run the model"),
+                               downloadButton("dws3","Download coefficients"),
+                               
+                               verbatimTextOutput("simp_summary")
+                               
+                             ),
+                             
+                             tabPanel(
+                               title = "Constrained Regression",
+                               actionButton("idc3","Click here to run the model"),
+                               downloadButton("dwc3","Download coefficients"),
+                               
+                               verbatimTextOutput("cons_summary")
+                               
+                             ),
+                             
                              tabPanel(
                             
                                title = "Download Reports",

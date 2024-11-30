@@ -17,6 +17,7 @@ library(lubridate)
 library(ggthemes)
 library(MASS)
 library(tseries)
+library(zoo)
 library(orcutt)
 library(readxl)
 library(dLagM)
@@ -45,6 +46,7 @@ vars <- tibble::tribble(
   
   ~id, ~ label, ~ multiple,
   "y_var", "select continuous outcome variable", FALSE,
+  "series", "choose a series to interpolate", FALSE,
   "x_vars", "select predictor variables", TRUE,
   "tr_vars", "select variables to transform", TRUE,
   "endo_vars", "endogenous variables", TRUE,
