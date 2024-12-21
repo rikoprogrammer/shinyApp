@@ -36,7 +36,8 @@ ui <- page_sidebar(
                                 pmap(vars[4,], mySelectInput),
                                 pmap(vars[5,], mySelectInput),
                                 pmap(vars[6,], mySelectInput),
-                                pmap(vars[7,], mySelectInput),
+                                pmap(vars[7,], mySelectInput)
+                                
                                 
                   
                 ),
@@ -72,7 +73,7 @@ ui <- page_sidebar(
                              navbarMenu("Model Results",
 
                                         tabpanFun2(title = "Model results - First model",id1 = "model_summary1", id3 = "hetero", id4 = "multi", id5 = "auto",
-                                                   id6 = "correct1",id7 = "correct_orcutt1", id8 = "correct_diff", run_id = "run1"),
+                                                   id6 = "correct1", run_id = "run1"),
 
                                         tabpanFun2(title = "Model results - Second model",id1 = "model_summary2", id3 = "hetero2", id4 = "multi2", id5 = "auto2",
                                                    id6 = "correct2", run_id = "run2"),
@@ -83,6 +84,15 @@ ui <- page_sidebar(
                                         tabpanFun2(title = "Forward  elimination method", id1 = "forward_results", run_id = "run4"),
                                         
                                         tabpanFun2(title = "Backward elimination method", id1 = "back_results", run_id = "run5")
+                             ),
+                             
+                             tabPanel(
+                               title = "Orcutt Cochrane correction",
+                               actionButton("id_orc","Click here to run the model"),
+                               downloadButton("orc_d","Download coefficients"),
+                               verbatimTextOutput("correct_orcutt1"),
+                               verbatimTextOutput("correct_diff")
+                               
                              ),
 
                              navbarMenu("Time series models",
@@ -201,10 +211,29 @@ ui <- page_sidebar(
                              
                              tabPanel(
                                title = "Constrained Regression",
+                               pmap(vars[8,], mySelectInput),
                                actionButton("idc3","Click here to run the model"),
-                               downloadButton("dwc3","Download coefficients"),
-                               
+                               #downloadButton("dwc3","Download coefficients"),
                                verbatimTextOutput("cons_summary")
+                               
+                             ),
+                             
+                             
+                             tabPanel(
+                               title = "Kalman Filter plus constraint",
+                               actionButton("id_kalman","Click here to run the model"),
+                               downloadButton("kalman_d","Download coefficients"),
+                               
+                               verbatimTextOutput("kalman_summary")
+                               
+                             ),
+                             
+                             tabPanel(
+                               title = "Solver",
+                               actionButton("id_solver","Click here to run the model"),
+                               downloadButton("solver_d","Download coefficients"),
+                               
+                               verbatimTextOutput("solver_summary")
                                
                              ),
                              

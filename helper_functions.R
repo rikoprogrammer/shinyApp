@@ -35,6 +35,7 @@ library(tsDyn)
 library(thematic)
 library(xlsx)
 library(DBI)
+library(matlib)
 
 oldOpt <- options()
 options(xlsx.date.format="dd MMM, yyyy")
@@ -52,6 +53,7 @@ vars <- tibble::tribble(
   "endo_vars", "endogenous variables", TRUE,
   "exo_vars", "exogenous variables", TRUE,
   "iv_vars", "instrument variables", TRUE,
+  "xa","choose one independent variable", FALSE
 )
 
 mySelectInput <- function(id, label, multiple) {
@@ -92,5 +94,56 @@ tabpanFun2 <- function(title, id1 = NULL,
   )
 }
 
+
+# Constrained regression convertor
+
+convertor <- function(X, Y) {
+  
+  cat("Matrix X \n")
+  print(X)
+  cat("Matrix Y \n")
+  print(Y)
+  
+  # I need to add a  column of 1 in the X for the constant 
+  X <- cbind(1, X)
+  
+  # Number of Rows 
+  n <- nrow(X)
+  
+  # Number of Columns 
+  k <- ncol(X)
+  
+  r1_r <- k  
+  
+  r1_c <- 1 
+  
+  r2_r <- k  
+  
+  r2_c <- k+1 
+  
+  # Set the size of the identity matrix
+  n <- k-1  # Change this for the desired size
+  
+  # Create the identity matrix (top block)
+  identity_block <- diag(1, n)
+  
+  # Create a single row of -1s
+  negative_row <- matrix(-1, nrow = 1, ncol = n)
+  
+  # Combine the blocks vertically
+  R2 <- rbind(identity_block, negative_row)
+  
+  # Create  column vector (matrix)
+  n <- k  # Define the size for the identity matrix
+  
+  # Create a column matrix where first n-1 elements are 0 and the last is 1
+  R1 <- matrix(c(rep(0, n-1), 1), ncol = 1)
+  
+  pi_sub = inv( t(X%*%R2) %*% (X%*%R2))   %*% t(X%*%R2) %*% (Y - (X%*%R1))
+  pi_res=  R1 + (R2%*%pi_sub)
+
+  return(pi_res)
+  
+}
 
 

@@ -50,6 +50,7 @@ server <- function(input, output, session) {
     "endo_vars", "endogenous variables",
     "exo_vars", "exogenous variables",
     "iv_vars", "instrument variables",
+    "xa","choose one independent variable"
   )
   
   updatefun <- function(id, label, choices = colnames(input_dataset())) {
@@ -379,6 +380,54 @@ server <- function(input, output, session) {
   })
   
 
+  # SIMPLEX regression implementation
+  
+  
+  
+  
+  # CONSTRAINED regression implementation
+  
+  # The imput is a matrix Y of nx1 and a matrix X of nxk , the only condition is both X and Y must 
+  # have the same number of rows and that Y is a column vector 
+  
+  # the result is a vector of betas of kx1 that they summ up to 1 
+  
+  
+  # The function convertor is defined in the helper_functions.R script
+  
+  constrained_df <- reactive({
+    
+    req(input_dataset())
+    
+    constrained_df <- input_dataset() |> 
+      dplyr::select(
+        dep = input$y_var,
+        indep = input$xa
+      )
+  }
+  )
+  
+  
+  
+  output$cons_summary <- renderPrint({
+    
+    if(input$idc3 > 0){
+      
+      
+      results = convertor(X = matrix(constrained_df()$indep,  nrow = 4, ncol = 4),
+                          Y = matrix(constrained_df()$dep,    nrow = 4, ncol = 1))
+     
+      cat("Constrained matrix \n")
+      print(results)
+   
+      cat("Confirm if the coefficients sum to 1 \n")
+      print(sum(results))
+    }
+  })
+
+  
+  
+  
   
   output$preds1 <-  renderDT({
     
@@ -430,7 +479,7 @@ server <- function(input, output, session) {
 
   
   #download a report in pdf format: am only downloading reports related to model 1 and model 2,
-  #but other model reports can as well be included.
+  #but other model reports can as well be included in future release of the app.
   
   
   output$dw5_ <- downloadHandler(
@@ -1160,6 +1209,13 @@ server <- function(input, output, session) {
       as.data.frame()
   )
   
+  coefficients6 <- reactive(
+    
+    fit1_corrected() %>% 
+      broom::tidy() %>% 
+      as.data.frame()
+  )
+  
   
   #### predicted values vs actual values
   
@@ -1306,6 +1362,18 @@ server <- function(input, output, session) {
   
   
   ###Download Handlers
+  
+  output$orc_d <- downloadHandler(
+    
+    filename = function() {
+      paste("orcut_coefficients", '.csv', sep = ",")
+    },
+    
+    content = function(file) {
+      
+      write.csv(coefficients6(), file, row.names = FALSE)
+    }
+  )
   
    output$dw3_ <- downloadHandler(
 
@@ -1494,6 +1562,9 @@ server <- function(input, output, session) {
     }
   })
   
+  
+  ## Orcut - cochrane correction
+  
   output$correct1 <- renderPrint(
     
     if(input$run1 < 0 ){
@@ -1506,10 +1577,10 @@ server <- function(input, output, session) {
   
   output$correct_orcutt1 <- renderPrint(
     
-    if(input$run1 < 0 ){
+    if(input$id_orc < 0 ){
       return("")
-    }else if(input$run1 > 0 ){
-      cat('Only consider the results below if there is a problem with autocorrelation, otherwise use the results from the above model.\n')
+    }else if(input$id_orc > 0 ){
+      cat('Only consider the results below if there is a problem with autocorrelation, otherwise use the results from the first model.\n')
       cat("Linear regression results after Cochrane-orcutt correction for autocorrelation.\n")
       fit1_corrected() |> 
         broom::tidy() %>% 
@@ -1521,9 +1592,9 @@ server <- function(input, output, session) {
   
   output$correct_diff <- renderPrint(
     
-    if(input$run1 < 0 ){
+    if(input$id_orc < 0 ){
       return("")
-    }else if(input$run1 > 0 ){
+    }else if(input$id_orc > 0 ){
       
       cat("Linear regression results after first difference (lag1) correction for autocorrelation.\n")
       fit1_corrected_d() |> 
@@ -1812,54 +1883,100 @@ server <- function(input, output, session) {
   ######### SAVING VARIOUS DATA SETS TO THE DATA BASE
   ### THIS IS STILL NOT WORKING --- FURTHER WORK IS NEEDED HERE ######
   
+  ### Working now as 17th of Dec 2024 - just need to figure out how to handle
+  ### user authentication.
   
-  # source('secrets.R')
+source('secrets.R')
+
+con <- reactive({
+
+  con <- dbConnect(RMySQL::MySQL(),
+                   dbname = 'google_trends',
+                   host = options()$mysql$host,
+                   port = options()$mysql$port,
+                   user = options()$mysql$user,
+                   password = options()$mysql$password)
+})
   
-  # con <- reactive({
-  #   
-  #   con <- dbConnect(RMySQL::MySQL(),
-  #                   dbname = 'google_trends',
-  #                   host = options()$mysql$host,
-  #                   port = options()$mysql$port,
-  #                   user = options()$mysql$user,
-  #                   password = options()$mysql$password)
-  #   
-  #   
-  #   
-  #   # Close the connection
-  # 
-  #   on.exit(dbDisconnect(db))
-  # })
-  # 
+  
+  # initialize_database(con, "data/ozone.duckdb", table = "ozone")
+
+    
+    observeEvent(
+      
+  
+      # Close the connection
+      
+      # on.exit(dbDisconnect(con)),
+   
+      input$db, {
+        tryCatch(
+          {
+            dbBegin(con())
+            
+            if(!is.null(preds1()) & input$db > 0){
+              
+              dbWriteTable(con(), name = "pred_test1", value = preds1(),
+                           overwrite = TRUE)
+            }
+            
+           
+            if ('pred_test1' %in% dbListTables(con())) {
+              showNotification(
+                markdown(
+                  glue::glue(
+                    "Table Successfully inserted into the database."
+                  )
+                ),
+                type = "message"
+              )
+            }
+            
+            dbCommit(con())
+          },
+          error = function(e) {
+            dbRollback(con())
+            showNotification("Error: Failed to update database.", type = "error")
+          }
+        )
+      }
+      
+    )
+    
+  
+    # Disconnect from DuckDB when the app stops
+    # onSessionEnded(function() {
+    #   dbDisconnect(con())
+    # })
+    # 
+  
   # save <- reactive(
-  #   
+  # 
   #   if(!is.null(preds1()) & input$db > 0){
-  #     
+  # 
   #     # Save the data to MySQL
   #     dbWriteTable(con(), name = 'pred_test', value = preds1())
-  #     
+  # 
   #   }
   # 
   # )
+
+
   
   
-  
-  
-  
-  
-  output$db <- downloadHandler(
-    
-    filename = function() {
-      paste("preds1_db", sep = "")
-    },
-    
-    content = function(file) {
-      
-      if(!is.null(preds1()) & input$db > 0){
-        dbWriteTable(con(), name = 'pred_test', value = preds1())
-      }
-    }
-  )
+  # output$db <- downloadHandler(
+  #   
+  #   filename = function() {
+  #     paste("preds1_db", sep = "")
+  #   },
+  #   
+  #   content = function(file) {
+  #     
+  #     if(!is.null(preds1()) & input$db > 0){
+  #       dbWriteTable(con(), name = 'pred_test', value = preds1())
+  #     }
+  #   }
+  # )
   
 
 }
