@@ -428,7 +428,6 @@ server <- function(input, output, session) {
   
   
   
-  
   output$preds1 <-  renderDT({
     
     if(input$idn1 > 0){
@@ -722,6 +721,7 @@ server <- function(input, output, session) {
       fit_ridge <- glmnet(x, y, alpha = 0, lambda = best_lambda)
     }
   })
+  
   
   #Backward and forward step AIC models
   
@@ -1195,6 +1195,15 @@ server <- function(input, output, session) {
       as.data.frame()
   )
   
+  coefficients3 <- reactive(
+    
+    fit_ridge() |> 
+      coef() |> 
+      as.matrix() |> 
+      as.data.frame() 
+  )
+  
+  
   coefficients4 <- reactive(
     
     forward_fit() %>% 
@@ -1388,6 +1397,9 @@ server <- function(input, output, session) {
       
      write.xlsx2(coefficients2(), file, sheetName = 'model2_coefficients',
                   row.names = FALSE, append = TRUE)
+     
+     write.xlsx2(coefficients3(), file, sheetName = 'ridge_coefficients',
+                 row.names = TRUE, append = TRUE)
      
      write.xlsx2(coefficients4(), file, sheetName = 'coef_forward_elimination',
                  row.names = FALSE, append = TRUE)
@@ -1883,8 +1895,9 @@ server <- function(input, output, session) {
   ######### SAVING VARIOUS DATA SETS TO THE DATA BASE
   ### THIS IS STILL NOT WORKING --- FURTHER WORK IS NEEDED HERE ######
   
-  ### Working now as 17th of Dec 2024 - just need to figure out how to handle
-  ### user authentication.
+  ### Working now as of 17th of Dec 2024 - just need to figure out how to handle
+  ### user authentication - passwords and usernames - should we expose these
+  ### in the online shiny app?--should we request these credentials from each user? ---.
   
 source('secrets.R')
 
@@ -1898,17 +1911,9 @@ con <- reactive({
                    password = options()$mysql$password)
 })
   
-  
-  # initialize_database(con, "data/ozone.duckdb", table = "ozone")
 
-    
     observeEvent(
       
-  
-      # Close the connection
-      
-      # on.exit(dbDisconnect(con)),
-   
       input$db, {
         tryCatch(
           {
@@ -1961,8 +1966,6 @@ con <- reactive({
   # 
   # )
 
-
-  
   
   # output$db <- downloadHandler(
   #   
