@@ -50,7 +50,7 @@ server <- function(input, output, session) {
     "endo_vars", "endogenous variables",
     "exo_vars", "exogenous variables",
     "iv_vars", "instrument variables",
-    "xa","choose one independent variable"
+    "xa","choose some independent variables"
   )
   
   updatefun <- function(id, label, choices = colnames(input_dataset())) {
@@ -403,25 +403,63 @@ server <- function(input, output, session) {
     
     constrained_df <- input_dataset() |> 
       dplyr::select(
-        dep = input$y_var,
+        dep = input$y_var
+      )
+  }
+  )
+  
+  constrained_df2 <- reactive({
+    
+    req(input_dataset())
+    
+    constrained_df <- input_dataset() |> 
+      dplyr::select(
+        dep   = input$y_var,
         indep = input$xa
       )
   }
   )
   
+  constrained_df_indep <- reactive({
+    
+    req(input_dataset())
+    
+    constrained_df_indep <- input_dataset() |> 
+      dplyr::select(
+        input$xa
+      )
+  }
+  )
   
   
   output$cons_summary <- renderPrint({
     
     if(input$idc3 > 0){
       
+      # this is executed for at least two independent variables
       
-      results = convertor(X = matrix(constrained_df()$indep,  nrow = 4, ncol = 4),
-                          Y = matrix(constrained_df()$dep,    nrow = 4, ncol = 1))
-     
+      if(ncol(constrained_df_indep()) > 1 ) {
+        results = convertor(X = matrix(c(constrained_df_indep(), recursive = TRUE,
+                                         use.names = FALSE), ncol = ncol(constrained_df_indep())),
+                            
+                            Y = matrix(constrained_df()$dep, ncol = 1))
+      }else {
+        
+        # 8th Jan 25: This branch is executed for a single independent variable,
+        # however some data points are lost in the process, eg am creating 
+        # a 4 by 4 matrix from the single column which has more than 16 values.
+        # This should be taken as a temporary solution, but in future it can
+        # be improved.
+        
+        results = convertor(X = matrix(constrained_df2()$indep,  nrow = 4, ncol = 4),
+                            Y = matrix(constrained_df2()$dep,    nrow = 4, ncol = 1))
+      }
+      
+      
+
       cat("Constrained matrix \n")
       print(results)
-   
+
       cat("Confirm if the coefficients sum to 1 \n")
       print(sum(results))
     }

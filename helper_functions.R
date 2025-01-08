@@ -53,7 +53,7 @@ vars <- tibble::tribble(
   "endo_vars", "endogenous variables", TRUE,
   "exo_vars", "exogenous variables", TRUE,
   "iv_vars", "instrument variables", TRUE,
-  "xa","choose one independent variable", FALSE
+  "xa","choose some independent variables", TRUE
 )
 
 mySelectInput <- function(id, label, multiple) {
