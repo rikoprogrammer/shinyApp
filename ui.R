@@ -83,7 +83,9 @@ ui <- page_sidebar(
                                         
                                         tabpanFun2(title = "Forward  elimination method", id1 = "forward_results", run_id = "run4"),
                                         
-                                        tabpanFun2(title = "Backward elimination method", id1 = "back_results", run_id = "run5")
+                                        tabpanFun2(title = "Backward elimination method", id1 = "back_results", run_id = "run5"),
+                                        
+                                        tabpanFun2(title = "Zero intercept model", id1 = "zero_results", run_id = "run_z")
                              ),
                              
                              tabPanel(

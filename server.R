@@ -385,6 +385,8 @@ server <- function(input, output, session) {
   
   
   
+  
+  
   # CONSTRAINED regression implementation
   
   # The imput is a matrix Y of nx1 and a matrix X of nxk , the only condition is both X and Y must 
@@ -755,6 +757,29 @@ server <- function(input, output, session) {
   }
   )
   
+  # Zero intercept model
+  
+  fit_zero <- reactive({
+    
+    if(input$run_z < 0) {
+      return("Please select your data first and choose proportion for training set!")
+    }else if(!is.null(input$file) & input$run_z > 0){
+      
+      
+      #Ensure that the user is selecting the correct dependent variable
+      
+      check <- get(input$y_var, input_dataset())
+      if (!is.numeric(check)) {
+        validate(paste0("'", input$y_var, 
+                        "' is not a numeric column, please select a numeric column "))
+      }
+      check
+      
+      fit_zero <- lm(dependent_var ~ 0 + ., data = dat())
+    }
+    
+  } )
+  
   
   #Transformed data sets
   
@@ -1021,6 +1046,7 @@ server <- function(input, output, session) {
   
   
   
+  
   # Cubic spline interpolation
   
   data_cubic <- reactive({
@@ -1183,46 +1209,72 @@ server <- function(input, output, session) {
   
   coefficients1 <- reactive(
     
-    fit1() %>% 
-      broom::tidy() %>% 
-      as.data.frame()
+    if(!is.null(input$file) & input$run1 > 0) {
+      fit1() %>% 
+        broom::tidy() %>% 
+        as.data.frame()
+    }
+    
   )
   
   coefficients2 <- reactive(
     
+    if(!is.null(input$file) & input$run2 > 0){
     fit2() %>% 
       broom::tidy() %>% 
       as.data.frame()
+      
+    }
   )
   
   coefficients3 <- reactive(
     
+    if(!is.null(input$file) & input$run3 > 0){
     fit_ridge() |> 
       coef() |> 
       as.matrix() |> 
       as.data.frame() 
+    }
   )
   
   
   coefficients4 <- reactive(
     
+    if(!is.null(input$file) & input$run4 > 0){
     forward_fit() %>% 
       broom::tidy() %>% 
       as.data.frame()
+    }
   )
   
   coefficients5 <- reactive(
     
+    if(!is.null(input$file) & input$run5 > 0){
     backward_fit() %>% 
       broom::tidy() %>% 
       as.data.frame()
+      
+    }
   )
   
   coefficients6 <- reactive(
     
+    if(!is.null(input$file) & input$id_orc > 0){
     fit1_corrected() %>% 
       broom::tidy() %>% 
       as.data.frame()
+      
+    }
+  )
+  
+  coefficients7 <- reactive(
+    
+    if(!is.null(input$file) & input$run_z > 0){
+    fit_zero() %>% 
+      broom::tidy() %>% 
+      as.data.frame()
+      
+    }
   )
   
   
@@ -1244,7 +1296,6 @@ server <- function(input, output, session) {
   })
   
 
-  
   
   preds2 <- reactive({
     
@@ -1392,23 +1443,44 @@ server <- function(input, output, session) {
 
     content = function(file) {
       
-     write.xlsx2(coefficients1(), file, sheetName = 'model1_coefficients',
+    if(!is.null(coefficients1())){
+      write.xlsx2(coefficients1(), file, sheetName = 'model1_coefficients',
                   row.names = FALSE)
-      
-     write.xlsx2(coefficients2(), file, sheetName = 'model2_coefficients',
+    }
+     
+    if(!is.null(coefficients2())){
+      write.xlsx2(coefficients2(), file, sheetName = 'model2_coefficients',
                   row.names = FALSE, append = TRUE)
+    }
      
-     write.xlsx2(coefficients3(), file, sheetName = 'ridge_coefficients',
-                 row.names = TRUE, append = TRUE)
+     if(!is.null(coefficients3())){
+       write.xlsx2(coefficients3(), file, sheetName = 'ridge_coefficients',
+                   row.names = TRUE, append = TRUE)
+     }
      
-     write.xlsx2(coefficients4(), file, sheetName = 'coef_forward_elimination',
-                 row.names = FALSE, append = TRUE)
+     if(!is.null(coefficients4())){
+       write.xlsx2(coefficients4(), file, sheetName = 'coef_forward_elimination',
+                   row.names = FALSE, append = TRUE)
+     }
+ 
      
-     write.xlsx2(coefficients5(), file, sheetName = 'coef_backward_elimination',
-                 row.names = FALSE, append = TRUE)
+    if(!is.null(coefficients5())){
+      write.xlsx2(coefficients5(), file, sheetName = 'coef_backward_elimination',
+                  row.names = FALSE, append = TRUE)
+    }
+     
 
-     write.xlsx2(coefs_iv(), file, sheetName = 'coef_IV_regression',
-            row.names = FALSE, append = TRUE)
+    if(!is.null(coefs_iv())){
+      write.xlsx2(coefs_iv(), file, sheetName = 'coef_IV_regression',
+                  row.names = FALSE, append = TRUE)
+    }
+     
+     
+    if(!is.null(coefficients7())){
+      write.xlsx2(coefficients7(), file, sheetName = 'zero_intercept_coefficients',
+                  row.names = FALSE, append = TRUE)
+    }
+     
       
     }
     
@@ -1829,6 +1901,23 @@ server <- function(input, output, session) {
     }
   )
   
+  output$zero_results <- renderPrint({
+    req(input_dataset())
+    
+    if(input$run_z < 0){
+      return(cat("Please run the model first!"))
+    }else if(input$run_z > 0){
+      cat("Multiple linear regression results for zero intercept model \n")
+      fit_zero() %>% 
+        broom::tidy() %>% 
+        pander::pander()
+      
+      cat("Performance metrics \n")
+      cat("R square:",round(summary(fit_zero())$r.squared, 3), "\n")
+      cat("Adjusted R square:",round(summary(fit_zero())$adj.r.squared, 3))
+    }
+  })
+  
   #graphs
   
   output$plot <- renderPlot({
@@ -1848,6 +1937,7 @@ server <- function(input, output, session) {
   })
   
   #plot for model 2
+  
   output$plot1 <- renderPlot({
     req(input_dataset)
     
