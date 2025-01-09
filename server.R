@@ -762,6 +762,31 @@ server <- function(input, output, session) {
     }
   })
   
+  # Ridge regression without the intercept
+  
+  fit_ridge_zero <- reactive({
+    
+    if(is.null(input$file) & input$run3 < 0){
+      return(cat("Please select your data and run the model first!"))
+    }else if(!is.null(input) & input$run3 > 0){
+      
+      y = data_ridge()$dependent_var
+      
+      x = data_ridge() %>% 
+        dplyr::select(input$x_vars) %>% 
+        data.matrix()
+      
+      
+      cv_model <- cv.glmnet(x, y, alpha = 0)
+      
+      best_lambda <- cv_model$lambda.min
+      
+      
+      fit_ridge_zero <- glmnet(x, y, alpha = 0, lambda = best_lambda,
+                               intercept = FALSE)
+    }
+  })
+  
   
   #Backward and forward step AIC models
   
@@ -1275,6 +1300,16 @@ server <- function(input, output, session) {
     }
   )
   
+  coefficients3_zero <- reactive(
+    
+    if(!is.null(input$file) & input$run3 > 0){
+      fit_ridge_zero() |> 
+        coef() |> 
+        as.matrix() |> 
+        as.data.frame() 
+    }
+  )
+  
   
   coefficients4 <- reactive(
     
@@ -1495,6 +1530,11 @@ server <- function(input, output, session) {
        write.xlsx2(coefficients3(), file, sheetName = 'ridge_coefficients',
                    row.names = TRUE, append = TRUE)
      }
+      
+      if(!is.null(coefficients3_zero())){
+        write.xlsx2(coefficients3_zero(), file, sheetName = 'ridge_coefficients_with_zero_intercept',
+                    row.names = TRUE, append = TRUE)
+      }
      
      if(!is.null(coefficients4())){
        write.xlsx2(coefficients4(), file, sheetName = 'coef_forward_elimination',
@@ -1829,6 +1869,15 @@ server <- function(input, output, session) {
     }else if(!is.null(input$file) & input$run3 > 0){
       cat("Ridge regression Results \n")
       coef(fit_ridge()) 
+    }
+  } )
+  
+  output$model_summary3_zero <- renderPrint({
+    if(is.null(input$file) & input$run3 < 0){
+      return(cat("Please run the model first!"))
+    }else if(!is.null(input$file) & input$run3 > 0){
+      cat("Ridge regression Results without the intercept \n")
+      coef(fit_ridge_zero()) 
     }
   } )
   

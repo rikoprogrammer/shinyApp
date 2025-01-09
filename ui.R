@@ -79,7 +79,7 @@ ui <- page_sidebar(
                                                    id6 = "correct2", run_id = "run2"),
 
                                         tabpanFun2(title = "Model results - Ridge Regression",
-                                                   id1 = "model_summary3", id2 = "metrics3", run_id = "run3"),
+                                                   id1 = "model_summary3", id2 = "model_summary3_zero", id3 = "metrics3", run_id = "run3"),
                                         
                                         tabpanFun2(title = "Forward  elimination method", id1 = "forward_results", run_id = "run4"),
                                         
