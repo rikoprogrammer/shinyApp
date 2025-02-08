@@ -1727,6 +1727,25 @@ server <- function(input, output, session) {
   
   ## Orcut - cochrane correction
   
+  
+  
+  
+  # Package ‘orcutt’ was removed from the CRAN repository.
+  # 
+  # Formerly available versions can be obtained from the archive.
+  # 
+  # Archived on 2024-11-04 as issues were not corrected despite reminders.
+  # 
+  # A summary of the most recent check results can be obtained from the check results archive.
+  # 
+  # Please use the canonical form https://CRAN.R-project.org/package=orcutt to link to this page.
+  # 
+  
+  # The package orcutt was archived and no longer maintained. 
+  # So maybe in the future we might need to look for other ways of
+  #performing orcut-cochrane correction
+  
+  
   output$correct1 <- renderPrint(
     
     if(input$run1 < 0 ){
@@ -2046,17 +2065,21 @@ server <- function(input, output, session) {
   ts_plot <- reactive(
     
     #use ggplot for an elegant graph
-      # mts() %>%
-      #   ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""),
-      #               plot.type = 'histogram',
-      #               ylab = input$y_var, theme = theme_economist())
+    
+      mts() %>%
+        ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""),
+                    plot.type = 'partial',
+                    ylab = input$y_var,
+              theme = theme_economist()) 
+      
+      # Its working now after updating the R version: 8th of Feb 2025.
       
     # Had to remove theme because of errors with ggplot2 package, hope this will be fixed in the future
      
-     mts() %>%
-        ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""),
-                    plot.type = 'histogram',
-                    ylab = input$y_var)
+     # mts() %>%
+     #    ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""),
+     #                plot.type = 'histogram',
+     #                ylab = input$y_var)
 
   )
   
