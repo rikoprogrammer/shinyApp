@@ -146,4 +146,43 @@ convertor <- function(X, Y) {
   
 }
 
+#constrained regression with zero intercept
+
+
+
+convertor_no <- function(X, Y) {
+  
+  cat("Matrix X \n")
+  print(X)
+  cat("Matrix Y \n")
+  print(Y)
+  
+  # Number of Rows
+  n <- nrow(X)
+  
+  # Number of Columns
+  k <- ncol(X)
+  
+  # Ensure the identity matrix and the negative row are the right size
+  identity_block <- diag(1, nrow = k - 1, ncol = k - 1)  # Identity matrix (size k-1)
+  
+  # Create a single row of -1s, making sure it's (1 x k-1)
+  negative_row <- matrix(-1, nrow = 1, ncol = k - 1)
+  
+  # Combine the blocks vertically (identity_block of size (k-1)x(k-1), negative_row of size 1x(k-1))
+  R2 <- rbind(identity_block, negative_row)
+  
+  # Create a column matrix (k x 1) where the first k-1 elements are 0 and the last is 1
+  R1 <- matrix(c(rep(0, k - 1), 1), ncol = 1)
+  
+  # Estimation steps
+  pi_sub <- solve(t(X %*% R2) %*% (X %*% R2)) %*% t(X %*% R2) %*% (Y - (X %*% R1))
+  pi_res <- R1 + (R2 %*% pi_sub)
+  
+  return(pi_res)
+}
+
+
+
+
 

@@ -387,6 +387,7 @@ server <- function(input, output, session) {
   
   
   
+  
   # CONSTRAINED regression implementation
   
   # The imput is a matrix Y of nx1 and a matrix X of nxk , the only condition is both X and Y must 
@@ -395,7 +396,7 @@ server <- function(input, output, session) {
   # the result is a vector of betas of kx1 that they summ up to 1 
   
   
-  # The function convertor is defined in the helper_functions.R script
+  # The function convertor() is defined in the helper_functions.R script
   
   constrained_df <- reactive({
     
@@ -466,7 +467,40 @@ server <- function(input, output, session) {
   })
 
   
+  # 8th of Feb 2025: Constrained regression with zero intercept
   
+  
+  output$cons_summary_ <- renderPrint({
+    
+
+      # this is executed for at least two independent variables
+      
+      if(ncol(constrained_df_indep()) > 1 ) {
+        results = convertor_no(X = matrix(c(constrained_df_indep(), recursive = TRUE,
+                                         use.names = FALSE), ncol = ncol(constrained_df_indep())),
+                            
+                               Y = matrix(constrained_df()$dep, ncol = 1))
+      }else {
+        
+        
+        results = convertor_no(X = matrix(constrained_df2()$indep,  nrow = 4, ncol = 4),
+                               Y = matrix(constrained_df2()$dep,    nrow = 4, ncol = 1))
+      }
+      
+      
+      
+      cat("Constrained matrix \n")
+      print(results)
+      
+      cat("Confirm if the coefficients sum to 1 \n")
+      print(sum(results))
+
+  })
+  
+  
+  
+  
+  # Render results from machine learning models
   
   output$preds1 <-  renderDT({
     
@@ -2076,10 +2110,6 @@ server <- function(input, output, session) {
       
     # Had to remove theme because of errors with ggplot2 package, hope this will be fixed in the future
      
-     # mts() %>%
-     #    ggtsdisplay(main = paste0("Time series plot for \n", input$y_var, collapse = ""),
-     #                plot.type = 'histogram',
-     #                ylab = input$y_var)
 
   )
   
@@ -2094,6 +2124,7 @@ server <- function(input, output, session) {
   
   ######### SAVING VARIOUS DATA SETS TO THE DATA BASE
   ### THIS IS STILL NOT WORKING --- FURTHER WORK IS NEEDED HERE ######
+  
   
   ### Working now as of 17th of Dec 2024 - just need to figure out how to handle
   ### user authentication - passwords and usernames - should we expose these

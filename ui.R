@@ -211,12 +211,26 @@ ui <- page_sidebar(
                                
                              ),
                              
-                             tabPanel(
-                               title = "Constrained Regression",
-                               pmap(vars[8,], mySelectInput),
-                               actionButton("idc3","Click here to run the model"),
-                               #downloadButton("dwc3","Download coefficients"),
-                               verbatimTextOutput("cons_summary")
+                             navbarMenu(
+                               "Constrained Regression",
+                               
+                               tabPanel(
+                                 title = "Constrained Regression with intercept",
+                                 pmap(vars[8,], mySelectInput),
+                                 actionButton("idc3","Click here to run the model"),
+                                 #downloadButton("dwc3","Download coefficients"),
+                                 verbatimTextOutput("cons_summary")
+                                 
+                               ),
+                               
+                               tabPanel(
+                                 title = "Constrained Regression without intercept",
+                                 # pmap(vars[8,], mySelectInput),
+                                 # actionButton("idc3_","Click here to run the model"),
+                                 #downloadButton("dwc3","Download coefficients"),
+                                 verbatimTextOutput("cons_summary_")
+                                 
+                               )
                                
                              ),
                              
