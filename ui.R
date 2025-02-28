@@ -205,9 +205,10 @@ ui <- page_sidebar(
                              tabPanel(
                                title = "Simplex Regression",
                                actionButton("ids3","Click here to run the model"),
-                               downloadButton("dws3","Download coefficients"),
+                               #downloadButton("dws3","Download coefficients"),
                                
-                               verbatimTextOutput("simp_summary")
+                               verbatimTextOutput("simp_summary"),
+                               plotOutput('simp_plot')
                                
                              ),
                              

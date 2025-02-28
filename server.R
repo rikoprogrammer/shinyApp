@@ -383,6 +383,87 @@ server <- function(input, output, session) {
   # SIMPLEX regression implementation
   
   
+  simp_df <- reactive(
+    
+     input_dataset() |> 
+       dplyr::mutate(date =  input_dataset()[[1]]) |> 
+       dplyr::select(
+         date,
+         input$x_vars,
+         dep = input$y_var
+       ) |> 
+       drop_na()
+  )
+  
+  simp_df_indep <- reactive(
+
+    input_dataset() |>
+      dplyr::select(
+         input$x_vars
+      ) |> 
+      drop_na()
+  )
+  
+ 
+  
+  output$simp_summary <- renderPrint({
+    
+    if(input$ids3 > 0) {
+      
+      
+      X <<- as.matrix(simp_df_indep())
+      Y <<- as.matrix(simp_df()$dep)
+      
+      
+      n <- dim(X)[2]
+      XX <<- t(X) %*% X
+      XY <<- t(X) %*% Y
+      # Q is (X'X)^-1
+      Q <- solve(XX)
+      # P is the Moore Pensrose Pseudo inverse of X
+      P <<- Q %*% t(X)
+      
+
+      # print(P)
+      objVal <- c()
+
+      workProbs <- seq(0.2, 0.3, 0.01)
+
+      for (workProb in workProbs) {
+        theta <- runGD(workProb)
+        obval <- SSE(X, Y, theta)
+        objVal <- c(objVal, obval)
+        cat("workProb =", workProb, "Objective value =", round(obval, 5), "\n")
+      }
+
+      workProb <- workProbs[which.min(objVal)]
+      thetaBest <- runGD(workProb)
+
+      print('Best parameters: ')
+      print(thetaBest)
+
+      pred <<- X %*% thetaBest
+
+    }
+    
+  })
+  
+  
+  output$simp_plot <- renderPlot({
+    
+    if(input$ids3 > 0){
+      
+      x = as.Date(simp_df()$date)
+      
+      plot(x, pred, xlab = "Date", ylab = input$y_var, 
+           main = "Forecast vs Target", col = "blue", type = "l", 
+           lty = 1, lwd = 2, ylim = range(c(pred, simp_df()$dep)), 
+           las = 2, cex.axis = 0.8, cex.lab = 0.8)
+      lines(x, simp_df()$dep, col = "red", lty = 2, lwd = 2)
+      legend("topleft", c('Forecast', "Target"), lty = c(1,2), lwd = c(2,2), col = c("blue", "red")) 
+    }
+    
+  })
   
   
   

@@ -184,5 +184,74 @@ convertor_no <- function(X, Y) {
 
 
 
+### Simplex regression  --- 27 Feb 2025
+
+# helper functions to carryout simplex regression
+
+
+SSE <- function(X, Y, Theta) {
+  diff <- X %*% Theta - Y
+  return (0.5 * t(diff) %*% diff)[1,1]
+}
+
+
+
+## 2. Simplex Regression with Projected Gradient Descent
+## Reference: https://math.stackexchange.com/questions/2005154/
+# number of variables is 4
+
+
+
+projectSimplex <- function(Y, prob=0) {
+  mu <- min(Y) - 1
+  iteration <- 0
+  while (TRUE) {
+    iteration <- iteration + 1
+    #print(iteration)
+    Yproj <- Y - mu
+    Yproj[Yproj < 0] <- 0
+    h <- sum(Yproj) - 1 + prob
+    #print(paste0('h = ', h))
+    # cat("iteration", iteration, ", h =", sprintf("%.5f", h), "\n")
+    delta <- sum(Yproj > 0)
+    mu <- mu + h/delta
+    #print(paste0('mu = ', mu))
+    if (h <= 1e-10 || iteration > 100) {
+      break
+    }
+  }
+  theta <- Y - mu
+  theta[theta < 0] <- 0
+  return(theta)
+}
+
+
+# Solution by Projected Gradient Descent (Direct Projection onto Unit Simplex)
+runGD <- function(workProb) {
+  
+  theta <- P %*% Y
+  niter <- 100
+  eta_base <- 8 * 10^(-5)
+  
+  for (i in 1:niter) {
+    # cat("Step", i, "\n----------\n")
+    eta <- eta_base/sqrt(i)
+    
+    # Gradient step
+    theta <- theta - eta * (XX %*% theta - XY)
+    
+    # projection of theta rest excluding work
+    thetaR <- theta[c(1,2,4)]
+    thetaR <- projectSimplex(thetaR, prob = workProb)
+    theta[c(1,2,4)] <- thetaR
+    theta[c(3)] <- workProb
+  }
+  
+  return(theta)
+}
+
+
+
+
 
 
