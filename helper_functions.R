@@ -39,6 +39,7 @@ library(matlib)
 
 oldOpt <- options()
 options(xlsx.date.format="dd MMM, yyyy")
+options(scipen=999)
 
 
 #  a helper function to generate multiple select input statements in the UI
