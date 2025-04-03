@@ -1442,7 +1442,7 @@ server <- function(input, output, session) {
       dplyr::select(quarter = 1,
                     input$series) |> 
       #ensure Q is replaced with q in the incoming data set
-             mutate(quarter = str_to_lower(quarter),
+             mutate(quarter = as.Date(str_to_lower(quarter)),
                     quarter = as.yearqtr(quarter, format="%Yq%q"),
                     qvar    = as.Date(quarter))
     
