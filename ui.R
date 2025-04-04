@@ -127,6 +127,7 @@ ui <- page_sidebar(
                                                     label = "Upload quarterly data"),
                                           pmap(vars[2,], mySelectInput),
                                           actionButton("run11", "Click here to run the model"),
+                                          downloadButton("qtr","Download quartely data"),
                                           DTOutput('cubic_dt'),
                                           plotOutput('cubic_plot')
                                           

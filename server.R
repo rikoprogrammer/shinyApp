@@ -1468,7 +1468,7 @@ server <- function(input, output, session) {
       data_cubic() |> 
       dplyr::select(
         qvar,
-        series = input$series
+        initial_series = input$series
       )
       
     }
@@ -1522,18 +1522,39 @@ server <- function(input, output, session) {
     ggplot() +
       # geom_line(data = quarterly_data(), aes(x = qvar, y = input$series),
       #           color = "blue") +
-      geom_line(data = quarterly2(),    aes(x = qvar, y = interpolated_values),
+      geom_path(data = quarterly2(),    aes(x = qvar, y = interpolated_values),
                 color = "red",
-                alpha = 0.8) +
-      labs(title = "A plot for the Interpolated time series",
-           x = "",
-           y = "")
+                alpha = 0.8,
+                linewidth = 0.8,
+                linetype = 4) +
+        scale_y_continuous(labels = scales::comma) +
+        labs(title = "A plot for the Interpolated time series",
+             subtitle = "The interpolation was done using the cubic spline method",
+             x = "Year",
+             y = "Quartely values") +
+        theme_economist()
       
       
     }
     
   )
   
+  # allow the user to download the interpolated data set - Eric 4th April 2025
+  
+    
+    output$qtr <- downloadHandler(
+      
+      filename = function() {
+        paste("interpolated_data", '.csv', sep = ",")
+      },
+      
+      content = function(file) {
+        
+        write.csv(interpolated_df(), file, row.names = FALSE)
+      }
+    )
+    
+
   
   #Render the transformed data sets
   
