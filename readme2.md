@@ -55,3 +55,12 @@ The null hypothesis and alternative hypothesis for the auto-correlation test is;
 **N/B:** All the statistical tests are performed at 5% significance level; we reject the null hypothesis is the p-values is less than 5%.
 
 ## Machine Learning Models
+
+Machine learning models are basically statistical models that can learn from data
+and make predictions on new data. Currently the app handles classification machine learning models,
+specifically logistic classification, decision tree classification, random forest classification, and
+support vector machine classification.
+
+
+
+
