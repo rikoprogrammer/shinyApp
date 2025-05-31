@@ -591,9 +591,6 @@ server <- function(input, output, session) {
   })
   
   
-  # model comparison for classification models
-  
- 
   
   output$iv_summary <- renderPrint({
     

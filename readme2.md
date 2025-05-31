@@ -61,6 +61,7 @@ and make predictions on new data. Currently the app handles classification machi
 specifically logistic classification, decision tree classification, random forest classification, and
 support vector machine classification.
 
-
+The idea is to use part of the data called training set to train your model and use the remaining portion of
+the data called testing set to evaluate the accuracy of your model.
 
 
