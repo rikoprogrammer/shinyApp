@@ -13,8 +13,8 @@ server <- function(input, output, session) {
       
       ext <- tools::file_ext(input$file$name)
       switch(ext,
-             csv  = readr::read_csv(file = input$file$datapath) %>% janitor::clean_names(),
-             xlsx = readxl::read_excel(path = input$file$datapath, sheet = input$sheet_index) %>% 
+             csv  = readr::read_csv(file = input$file$datapath) |> janitor::clean_names(),
+             xlsx = readxl::read_excel(path = input$file$datapath, sheet = input$sheet_index) |> 
                janitor::clean_names(),
              validate("Invalid file; Please upload a .csv or .xlsx file")
       )
@@ -32,8 +32,8 @@ server <- function(input, output, session) {
       
       ext2 <- tools::file_ext(input$file2$name)
       switch(ext2,
-             csv  = readr::read_csv(file2 = input$file2$datapath) %>% janitor::clean_names(),
-             xlsx = readxl::read_excel(path = input$file2$datapath, sheet = input$sheet_index) %>% 
+             csv  = readr::read_csv(file2 = input$file2$datapath) |> janitor::clean_names(),
+             xlsx = readxl::read_excel(path = input$file2$datapath, sheet = input$sheet_index) |> 
                janitor::clean_names(),
              validate("Invalid file; Please upload a .csv or .xlsx file")
       )
@@ -99,15 +99,18 @@ server <- function(input, output, session) {
   })
   
   
+  # create a data frame for doing ML/Classification models
+  # these models require the dependent varibale to be coded as 0/1 or if it is
+  # in character format then it should be coded as a factor variable
   
   dat <- reactive({
     
-    input_dataset() %>% 
+    input_dataset() |> 
     dplyr::select(
       dependent_var = input$y_var,
-      input$x_vars) %>% 
-    mutate_if(is.character, as.factor) %>% 
-    drop_na()
+      input$x_vars) |> 
+    mutate_if(is.character, as.factor) |> 
+   drop_na()
   })
   
 
@@ -133,6 +136,7 @@ server <- function(input, output, session) {
    
   })
   
+  
   test <- reactive({
     set.seed(123)
  
@@ -141,7 +145,42 @@ server <- function(input, output, session) {
     test <- testing(data_split)
   })
   
-  #Decision tree regression
+  # Logistic regression/classification model 
+  
+  logistic_fit <- reactive({
+    
+    if(is.null(input$file) & input$idn0 < 0) {
+      return("Please select your data first and run the model!")
+    }else if(!is.null(input$file) & input$idn0 > 0){
+      
+      
+      #Ensure that the user is selecting the correct dependent variable
+      
+      # check <- get(input$y_var, input_dataset())
+      # if (!is.numeric(check)) {
+      #   validate(paste0("'", input$y_var, 
+      #                   "' is not a numeric column, please select a numeric column "))
+      # }
+      # check
+      
+      set.seed(123)
+      
+      logistic_spec <- logistic_reg() %>%
+        set_engine("glm") %>%
+        set_mode("classification")
+      
+      
+      # Fit the model to the training data
+      logistic_fit <- logistic_spec %>%
+        fit(dependent_var ~ ., data = train())
+      
+    }
+    
+  } )
+  
+  
+  
+  #Decision tree regression/classification
   
   tree_fit <- reactive({
     
@@ -152,18 +191,18 @@ server <- function(input, output, session) {
       
       #Ensure that the user is selecting the correct dependent variable
       
-      check <- get(input$y_var, input_dataset())
-      if (!is.numeric(check)) {
-        validate(paste0("'", input$y_var, 
-                        "' is not a numeric column, please select a numeric column "))
-      }
-      check
+      # check <- get(input$y_var, input_dataset())
+      # if (!is.numeric(check)) {
+      #   validate(paste0("'", input$y_var, 
+      #                   "' is not a numeric column, please select a numeric column "))
+      # }
+      # check
       
       set.seed(123)
       
       tree_spec <- decision_tree() %>%
         set_engine("rpart") %>%
-        set_mode("regression")
+        set_mode("classification")
       
       # Fit the model to the training data
       tree_fit <- tree_spec %>%
@@ -173,28 +212,58 @@ server <- function(input, output, session) {
     
   } )
   
+  
   ### Random forest regression
   
   forest_fit <- reactive({
     
     if(input$idn2 > 0){
-      rf_defaults <- rand_forest(mode = "regression")
+      
+      rf_defaults <- rand_forest(trees = 200, min_n = 5, 
+                                 mode = "classification")
+      
+      set.seed(123)
       
       forest_fit <- 
         rf_defaults %>%
-        set_engine("ranger", importance = "impurity") %>%
-        fit_xy(
-          x = train(),
-          y = train()$dependent_var
+        set_engine("ranger") %>%
+        fit(
+          dependent_var ~ ., data = train()
         )
     }
   })
   
   
+  ### Support vector machine model
+  
+  svm_fit <- reactive({
+    
+    if(input$idn33 > 0){
+      # svm_fit = svm(formula = dependent_var ~ .,
+      #               data = train(),
+      #               type = 'eps-regression',
+      #               kernel = 'radial')
+      
+      svm_spec <- svm_rbf() %>%
+        set_mode("classification") %>%
+        set_engine("kernlab", scaled = FALSE)
+      
+      svm_fit <- svm_spec %>%
+        fit(dependent_var ~ ., data = train())
+    }
+  }
+  )
+  
+  
+  
+  #############
+  
   #Instrument variable regression
   
+  ###########
+  
   data_iv <- reactive(
-    input_dataset() %>% 
+    input_dataset() |> 
       dplyr::select(dependent_var = input$y_var,
                     input$exo_vars,
                     input$endo_vars,
@@ -224,18 +293,7 @@ server <- function(input, output, session) {
     
   })
   
-  ### Support vector machine model
-  
-  svm_fit <- reactive({
-    
-    if(input$idn33 > 0){
-      svm_fit = svm(formula = dependent_var ~ .,
-                    data = train(),
-                    type = 'eps-regression',
-                    kernel = 'radial')
-    }
-  }
-  )
+
   
   
   ##Coefficients of the IV model
@@ -251,6 +309,23 @@ server <- function(input, output, session) {
   
   #Prediction data sets for machine learning models
   
+  preds0_df <- reactive(
+    
+    if(input$idn0 > 0){
+      
+      preds0_df = test() %>%
+        dplyr::select(dependent_var) %>%
+        as.data.frame() |> 
+        dplyr::bind_cols(
+          stats::predict(logistic_fit(), new_data = test(), type = "class"),
+          stats::predict(logistic_fit(), new_data = test(), type = "prob")
+          
+        )
+      
+    }
+    
+  )
+  
   preds1_df <- reactive(
     
     if(input$idn1 > 0){
@@ -258,7 +333,7 @@ server <- function(input, output, session) {
       
       preds1_df = test() %>%
         dplyr::select(dependent_var) %>%
-        as.data.frame() %>% 
+        as.data.frame() |> 
         dplyr::bind_cols(
           stats::predict(tree_fit(), new_data = test())
         )
@@ -276,7 +351,7 @@ server <- function(input, output, session) {
       
       preds2_df =  test() %>%
         dplyr::select(dependent_var) %>%
-        as.data.frame() %>% 
+        as.data.frame() |> 
         dplyr::bind_cols(
           stats::predict(forest_fit(), new_data = test())
         )
@@ -292,13 +367,61 @@ server <- function(input, output, session) {
       
       preds3_df = test() %>%
         dplyr::select(dependent_var) %>%
-        as.data.frame() %>% 
+        as.data.frame() |> 
         dplyr::bind_cols(
           predictions
         )
     }
   })
   
+  
+  output$metrics0 <- renderPrint({
+    
+    if(input$idn0 > 0) {
+      
+      cat("RESULTS FOR LOGISTIC CLASSIFICATION \n")
+      cat("\n")
+      
+      cat("A table for the log odds\n")
+      
+  
+      broom::tidy(logistic_fit(), exponentiate = TRUE) |>
+        knitr::kable(digits = 3) |>
+        print()
+      
+      pred_class <- predict(logistic_fit(),
+                            new_data = test(),
+                            type = "class")
+      
+      # Prediction Probabilities
+      pred_proba <- predict(logistic_fit(),
+                            new_data = test(),
+                            type = "prob")
+      
+      #final data preparation for model evaluation
+      
+      results <- test() %>%
+        dplyr::select(dependent_var) %>%
+        bind_cols(pred_class, pred_proba)
+      
+      
+      # custom metrics
+      custom_metrics <- metric_set(accuracy, sensitivity, specificity,
+                                   precision, recall, f_meas, kap, mcc)
+      
+      cat("\n")
+      cat("\n")
+      cat("Classification Metrics\n")
+   
+      
+      custom_metrics(results,
+                     truth    = dependent_var,
+                     estimate = .pred_class) |>
+        knitr::kable()
+      
+    }
+    
+  })
   
   
   output$metrics1 <- renderPrint({
@@ -308,23 +431,58 @@ server <- function(input, output, session) {
       cat("RESULTS FOR DECISION TREE REGRESSION \n")
       
       # Make predictions on the testing data
-      predictions <- tree_fit() %>%
-        stats::predict(test()) %>%
-        pull(.pred)
+      # predictions <- tree_fit() %>%
+      #   stats::predict(test()) %>%
+      #   pull(.pred)
+      # 
+      # #Calculate RMSE and R-squared
+      # 
+      # metrics <- metric_set(rmse, rsq)
+      # model_performance <- test() %>%
+      #   dplyr::mutate(predictions = predictions) %>%
+      #   metrics(truth = dependent_var, estimate = predictions)
+      # 
+      # model_performance |> 
+      #   pander::pander()
+      # 
       
-      #Calculate RMSE and R-squared
+      # May 31 2025 changed from decision tree regression to decision tree classification
       
-      metrics <- metric_set(rmse, rsq)
-      model_performance <- test() %>%
-        dplyr::mutate(predictions = predictions) %>%
-        metrics(truth = dependent_var, estimate = predictions)
       
-      model_performance %>% 
-        pander::pander()
+      pred_class <- predict(tree_fit(),
+                            new_data = test(),
+                            type = "class")
+      
+      # Prediction Probabilities
+      pred_proba <- predict(tree_fit(),
+                            new_data = test(),
+                            type = "prob")
+      
+      #final data preparation for model evaluation
+      
+      results <- test() %>%
+        dplyr::select(dependent_var) %>%
+        bind_cols(pred_class, pred_proba)
+      
+      
+      # custom metrics
+      custom_metrics <- metric_set(accuracy, sensitivity, specificity,
+                                   precision, recall, f_meas, kap, mcc)
+      
+      cat("\n")
+      cat("\n")
+      cat("Classification Metrics\n")
+      
+      
+      custom_metrics(results,
+                     truth    = dependent_var,
+                     estimate = .pred_class) |>
+        knitr::kable()
       
     }
     
   })
+  
   
   output$metrics2 <- renderPrint({
     
@@ -332,30 +490,52 @@ server <- function(input, output, session) {
       
       cat("RESULTS FOR RANDOM FOREST REGRESSION \n")
       
-      test_results <- 
-        test() %>%
-        dplyr::select(dependent_var) %>%
-        bind_cols(
-          stats::predict(forest_fit(), new_data = test())
-        )
+      # test_results <- 
+      #   test() %>%
+      #   dplyr::select(dependent_var) %>%
+      #   bind_cols(
+      #     stats::predict(forest_fit(), new_data = test())
+      #   )
+      # 
+      # # summarize performance
+      # test_results |> metrics(truth = dependent_var, 
+      #                          estimate = .pred) |> 
+      #   pander::pander()
       
-      # summarize performance
-      test_results %>% metrics(truth = dependent_var, 
-                               estimate = .pred) %>% 
-        pander::pander()
+      
+      pred_class <- predict(forest_fit(),
+                            new_data = test(),
+                            type = "class")
+      
+      # Prediction Probabilities
+      pred_proba <- predict(forest_fit(),
+                            new_data = test(),
+                            type = "prob")
+      
+      #final data preparation for model evaluation
+      
+      results <- test() %>%
+        dplyr::select(dependent_var) %>%
+        bind_cols(pred_class, pred_proba)
+      
+      
+      # custom metrics
+      custom_metrics <- metric_set(accuracy, sensitivity, specificity,
+                                   precision, recall, f_meas, kap, mcc)
+      
+      cat("\n")
+      cat("\n")
+      cat("Classification Metrics\n")
+      
+      
+      custom_metrics(results,
+                     truth    = dependent_var,
+                     estimate = .pred_class) |>
+        knitr::kable()
     }
   })
   
   
-  output$iv_summary <- renderPrint({
-
-    if(input$idn3 > 0){
-
-      print(form())
-      summary(iv_fit(), vcov = sandwich, diagnostics = TRUE)
-    }
-  })
-
  
   
   output$metrics33 <- renderPrint({
@@ -364,18 +544,63 @@ server <- function(input, output, session) {
       
       cat("RESULTS FOR SVM MODEL \n")
       
-      # Make predictions on the testing data
-      predictions <- svm_fit() %>%
-        predict(test())
+      # # Make predictions on the testing data
+      # predictions <- svm_fit() %>%
+      #   predict(test())
+      # 
+      # #Calculate RMSE and R-squared
+      # metrics <- metric_set(rmse, rsq)
+      # model_performance <- test() %>%
+      #   dplyr::mutate(predictions = predictions) %>%
+      #   metrics(truth = dependent_var, estimate = predictions)
+      # 
+      # model_performance |> 
+      #   pander::pander()
       
-      #Calculate RMSE and R-squared
-      metrics <- metric_set(rmse, rsq)
-      model_performance <- test() %>%
-        dplyr::mutate(predictions = predictions) %>%
-        metrics(truth = dependent_var, estimate = predictions)
+      pred_class <- predict(svm_fit(),
+                            new_data = test(),
+                            type = "class")
       
-      model_performance %>% 
-        pander::pander()
+      # Prediction Probabilities
+      pred_proba <- predict(svm_fit(),
+                            new_data = test(),
+                            type = "prob")
+      
+      #final data preparation for model evaluation
+      
+      results <- test() %>%
+        dplyr::select(dependent_var) %>%
+        bind_cols(pred_class, pred_proba)
+      
+      
+      # custom metrics
+      custom_metrics <- metric_set(accuracy, sensitivity, specificity,
+                                   precision, recall, f_meas, kap, mcc)
+      
+      cat("\n")
+      cat("\n")
+      cat("Classification Metrics\n")
+      
+      
+      custom_metrics(results,
+                     truth    = dependent_var,
+                     estimate = .pred_class) |>
+        knitr::kable()
+    }
+    
+  })
+  
+  
+  # model comparison for classification models
+  
+ 
+  
+  output$iv_summary <- renderPrint({
+    
+    if(input$idn3 > 0){
+      
+      print(form())
+      summary(iv_fit(), vcov = sandwich, diagnostics = TRUE)
     }
   })
   
@@ -778,10 +1003,26 @@ server <- function(input, output, session) {
   })
   
   
-  ### SOLVER IMPLEMENTATION
+  ### SOLVER IMPLEMENTATION - not yet implemented
+  
+  
   
   
   # Render results from machine learning models
+  
+  output$preds0 <-  renderDT({
+    
+    if(input$idn0 > 0){
+      test_results <- 
+        test() %>%
+        dplyr::select(dependent_var) %>%
+        bind_cols(
+          predict(logistic_fit(), new_data = test())
+        )
+      
+      test_results 
+    }
+  })
   
   output$preds1 <-  renderDT({
     
@@ -833,7 +1074,7 @@ server <- function(input, output, session) {
 
   
   #download a report in pdf format: am only downloading reports related to model 1 and model 2,
-  #but other model reports can as well be included in future release of the app.
+  #but other model reports can as well be included in future releases of the app.
   
   
   output$dw5_ <- downloadHandler(
@@ -914,7 +1155,7 @@ server <- function(input, output, session) {
   
   fit_coch <- reactive(
     
-    fit1() %>% 
+    fit1() |> 
       cochrane.orcutt(convergence = 5, max.iter = 1000)
   )
   
@@ -1012,7 +1253,7 @@ server <- function(input, output, session) {
       dat3 = dat() %>%
         dplyr::mutate(residuals = summary(fit1())$residuals,
                       dummy1    = if_else(residuals >= std_error, 1, 0),
-                      dummy2    = if_else(residuals < -std_error, 1, 0)) %>% 
+                      dummy2    = if_else(residuals < -std_error, 1, 0)) |> 
         dplyr::select(-residuals) 
       
       
@@ -1047,10 +1288,10 @@ server <- function(input, output, session) {
   
   data_ridge <- reactive(
     
-    input_dataset() %>% 
+    input_dataset() |> 
       dplyr::select(
         dependent_var = input$y_var,
-        input$x_vars) %>% 
+        input$x_vars) |> 
       drop_na() 
   )
   
@@ -1063,8 +1304,8 @@ server <- function(input, output, session) {
       
       y = data_ridge()$dependent_var
       
-      x = data_ridge() %>% 
-        dplyr::select(input$x_vars) %>% 
+      x = data_ridge() |> 
+        dplyr::select(input$x_vars) |> 
         data.matrix()
       
       
@@ -1087,8 +1328,8 @@ server <- function(input, output, session) {
       
       y = data_ridge()$dependent_var
       
-      x = data_ridge() %>% 
-        dplyr::select(input$x_vars) %>% 
+      x = data_ridge() |> 
+        dplyr::select(input$x_vars) |> 
         data.matrix()
       
       
@@ -1163,50 +1404,50 @@ server <- function(input, output, session) {
   
   tr_data <- reactive(
     
-    input_dataset() %>% 
-      dplyr::select(input$tr_vars) %>% 
+    input_dataset() |> 
+      dplyr::select(input$tr_vars) |> 
       drop_na()
   )
   
   log_data <- reactive({
     
-   tr_data() %>% 
-      dplyr::select_if(is.numeric) %>% 
+   tr_data() |> 
+      dplyr::select_if(is.numeric) |> 
       log()
   })
   
   first_diff_data <- reactive({
-    tr_data() %>% 
-      dplyr::select_if(is.numeric) %>% 
-      as.matrix() %>% 
+    tr_data() |> 
+      dplyr::select_if(is.numeric) |> 
+      as.matrix() |> 
       diff()
   })
   
   ts_lag1 <- reactive({
     
     tr_data() %>%
-      dplyr::select_if(is.numeric) %>% 
+      dplyr::select_if(is.numeric) |> 
       dplyr::lag()
   })
   
   ts_lag2 <- reactive({
     
-    tr_data() %>% 
-      dplyr::select_if(is.numeric) %>% 
+    tr_data() |> 
+      dplyr::select_if(is.numeric) |> 
       dplyr::lag(2)
   })
   
   ts_lag3 <- reactive({
     
-    tr_data() %>% 
-      dplyr::select_if(is.numeric) %>% 
+    tr_data() |> 
+      dplyr::select_if(is.numeric) |> 
       dplyr::lag(3)
   })
   
   ts_lag4 <- reactive({
     
-    tr_data() %>% 
-      dplyr::select_if(is.numeric) %>% 
+    tr_data() |> 
+      dplyr::select_if(is.numeric) |> 
       dplyr::lag(4)
   })
   
@@ -1292,22 +1533,22 @@ server <- function(input, output, session) {
   
   ts_df <- reactive({
     
-    input_dataset() %>% 
-      dplyr::mutate(date_u =  input_dataset()[[1]]) %>% 
+    input_dataset() |> 
+      dplyr::mutate(date_u =  input_dataset()[[1]]) |> 
       dplyr::select(
         dependent_var = input$y_var,
-        date_u) %>% 
+        date_u) |> 
       drop_na()
   })
   
   ts_df2 <- reactive({
     
     input_dataset() %>%
-      dplyr::mutate(date_u =  input_dataset()[[1]]) %>% 
+      dplyr::mutate(date_u =  input_dataset()[[1]]) |> 
       dplyr::select(
         dependent_var = input$y_var,
-        date_u) %>% 
-      drop_na() %>% 
+        date_u) |> 
+      drop_na() |> 
       dplyr::lag()
   })
   
@@ -1379,7 +1620,7 @@ server <- function(input, output, session) {
   
   var_df <- reactive(
     
-    var_df <- input_dataset() %>% 
+    var_df <- input_dataset() |> 
       dplyr::select(input$x_vars)
   )
   
@@ -1394,8 +1635,8 @@ server <- function(input, output, session) {
   
   data_vecm <- reactive(
     
-    input_dataset() %>% 
-      dplyr::select(1, input$x_vars) %>% 
+    input_dataset() |> 
+      dplyr::select(1, input$x_vars) |> 
       as.data.frame()
   )
   
@@ -1609,8 +1850,8 @@ server <- function(input, output, session) {
   coefficients1 <- reactive(
     
     if(!is.null(input$file) & input$run1 > 0) {
-      fit1() %>% 
-        broom::tidy() %>% 
+      fit1() |> 
+        broom::tidy() |> 
         as.data.frame()
     }
     
@@ -1619,8 +1860,8 @@ server <- function(input, output, session) {
   coefficients2 <- reactive(
     
     if(!is.null(input$file) & input$run2 > 0){
-    fit2() %>% 
-      broom::tidy() %>% 
+    fit2() |> 
+      broom::tidy() |> 
       as.data.frame()
       
     }
@@ -1650,8 +1891,8 @@ server <- function(input, output, session) {
   coefficients4 <- reactive(
     
     if(!is.null(input$file) & input$run4 > 0){
-    forward_fit() %>% 
-      broom::tidy() %>% 
+    forward_fit() |> 
+      broom::tidy() |> 
       as.data.frame()
     }
   )
@@ -1659,8 +1900,8 @@ server <- function(input, output, session) {
   coefficients5 <- reactive(
     
     if(!is.null(input$file) & input$run5 > 0){
-    backward_fit() %>% 
-      broom::tidy() %>% 
+    backward_fit() |> 
+      broom::tidy() |> 
       as.data.frame()
       
     }
@@ -1669,8 +1910,8 @@ server <- function(input, output, session) {
   coefficients6 <- reactive(
     
     if(!is.null(input$file) & input$id_orc > 0){
-    fit1_corrected() %>% 
-      broom::tidy() %>% 
+    fit1_corrected() |> 
+      broom::tidy() |> 
       as.data.frame()
       
     }
@@ -1679,8 +1920,8 @@ server <- function(input, output, session) {
   coefficients7 <- reactive(
     
     if(!is.null(input$file) & input$run_z > 0){
-    fit_zero() %>% 
-      broom::tidy() %>% 
+    fit_zero() |> 
+      broom::tidy() |> 
       as.data.frame()
       
     }
@@ -1697,9 +1938,9 @@ server <- function(input, output, session) {
     pred1 = stats::predict(fit1())
     
     preds1 = input_dataset() %>%
-      dplyr::select(1, input$y_var, input$x_vars) %>% 
-      drop_na() %>% 
-      dplyr::mutate(preds = pred1) %>% 
+      dplyr::select(1, input$y_var, input$x_vars) |> 
+      drop_na() |> 
+      dplyr::mutate(preds = pred1) |> 
       as.data.frame()
     }
   })
@@ -1714,13 +1955,13 @@ server <- function(input, output, session) {
       std_error = summary(fit1())$sigma
       
       preds2 = input_dataset() %>%
-        dplyr::select(1, input$y_var, input$x_vars) %>% 
-        drop_na() %>% 
+        dplyr::select(1, input$y_var, input$x_vars) |> 
+        drop_na() |> 
         dplyr::mutate(preds = pred,
                       residuals = summary(fit1())$residuals,
                       dummy1    = if_else(residuals >= std_error, 1, 0),
-                      dummy2    = if_else(residuals < -std_error, 1, 0)) %>% 
-        dplyr::select(-residuals) %>% 
+                      dummy2    = if_else(residuals < -std_error, 1, 0)) |> 
+        dplyr::select(-residuals) |> 
         as.data.frame()
     }
     
@@ -1733,9 +1974,9 @@ server <- function(input, output, session) {
       
       
       preds_forward = input_dataset() %>%
-        dplyr::select(1, input$y_var, input$x_vars) %>% 
-        drop_na() %>% 
-        dplyr::mutate(preds = pred) %>% 
+        dplyr::select(1, input$y_var, input$x_vars) |> 
+        drop_na() |> 
+        dplyr::mutate(preds = pred) |> 
         as.data.frame()
     }
     
@@ -1748,9 +1989,9 @@ server <- function(input, output, session) {
       
       
       preds_back = input_dataset() %>%
-        dplyr::select(1, input$y_var, input$x_vars) %>% 
-        drop_na() %>% 
-        dplyr::mutate(preds = pred) %>% 
+        dplyr::select(1, input$y_var, input$x_vars) |> 
+        drop_na() |> 
+        dplyr::mutate(preds = pred) |> 
         as.data.frame()
     }
     
@@ -1764,12 +2005,12 @@ server <- function(input, output, session) {
       
       y = data_ridge()$dependent_var
       
-      x = data_ridge() %>% 
-        dplyr::select(input$x_vars) %>% 
+      x = data_ridge() |> 
+        dplyr::select(input$x_vars) |> 
         data.matrix()
       
-      x_test = data_ridge() %>% 
-        dplyr::select(input$x_vars) %>% 
+      x_test = data_ridge() |> 
+        dplyr::select(input$x_vars) |> 
         data.matrix()
       
       
@@ -1784,7 +2025,7 @@ server <- function(input, output, session) {
       
       
       preds_ridge = data_ridge() %>%
-        dplyr::mutate(preds = pred) %>% 
+        dplyr::mutate(preds = pred) |> 
         as.data.frame()
     }
     
@@ -1798,14 +2039,14 @@ server <- function(input, output, session) {
       pred = forecast::forecast(ts_fit())
       y = as.numeric(pred$fitted)
       
-      dat2_ <- input_dataset() %>% 
+      dat2_ <- input_dataset() |> 
         dplyr::select(
-          input$y_var) %>% 
+          input$y_var) |> 
         drop_na() 
       
       
       preds_time = dat2_ %>%
-        dplyr::mutate(preds = y) %>% 
+        dplyr::mutate(preds = y) |> 
         as.data.frame()
     }
   })
@@ -1816,14 +2057,14 @@ server <- function(input, output, session) {
       pred = forecast::forecast(ts_fit2())
       y = as.numeric(pred$fitted)
       
-      dat2_ <- input_dataset() %>% 
+      dat2_ <- input_dataset() |> 
         dplyr::select(
-          input$y_var) %>% 
+          input$y_var) |> 
         drop_na() 
       
       
       preds_time2 = dat2_ %>%
-        dplyr::mutate(preds = y) %>% 
+        dplyr::mutate(preds = y) |> 
         as.data.frame()
     }
     
@@ -1945,6 +2186,9 @@ server <- function(input, output, session) {
                     row.names = FALSE, append = TRUE)
       }
       
+      write.xlsx2(preds0_df(), file, sheetName = 'logistic_classification_preds',
+                  row.names = FALSE, append = TRUE)
+      
       write.xlsx2(preds1_df(), file, sheetName = 'decision_tree_predictions',
                   row.names = FALSE, append = TRUE)
       
@@ -1994,8 +2238,8 @@ server <- function(input, output, session) {
       return(cat("Please run the model first!"))
     }else if(input$run1 > 0){
       cat("Multiple linear regression without dummy variables \n")
-      fit1() %>% 
-        broom::tidy() %>% 
+      fit1() |> 
+        broom::tidy() |> 
         pander::pander()
       
       cat("Performance metrics \n")
@@ -2041,7 +2285,7 @@ server <- function(input, output, session) {
         
         df = tibble(variable = names(vif),
                     vif = vif)
-        df %>% 
+        df |> 
           pander::pander()
       }
     }
@@ -2087,7 +2331,7 @@ server <- function(input, output, session) {
     if(input$run1 < 0 ){
       return("")
     }else if(input$run1 > 0 ){
-      fit1() %>% 
+      fit1() |> 
         cochrane.orcutt(convergence = 5, max.iter = 1000)
     }
   )
@@ -2100,7 +2344,7 @@ server <- function(input, output, session) {
       cat('Only consider the results below if there is a problem with autocorrelation, otherwise use the results from the first model.\n')
       cat("Linear regression results after Cochrane-orcutt correction for autocorrelation.\n")
       fit1_corrected() |> 
-        broom::tidy() %>% 
+        broom::tidy() |> 
         pander::pander()
         
     }
@@ -2115,7 +2359,7 @@ server <- function(input, output, session) {
       
       cat("Linear regression results after first difference (lag1) correction for autocorrelation.\n")
       fit1_corrected_d() |> 
-        broom::tidy() %>% 
+        broom::tidy() |> 
         pander::pander()
       
     }
@@ -2133,8 +2377,8 @@ server <- function(input, output, session) {
       return(cat("Please run the first model first to generate standard errors!"))
     }else if(!is.null(input$file) & input$run2 > 0){
       cat("Multiple linear regression with dummy variables \n")
-      fit2() %>% 
-        broom::tidy() %>% 
+      fit2() |> 
+        broom::tidy() |> 
         pander::pander()
       
       cat("Performance metrics \n")
@@ -2153,7 +2397,7 @@ server <- function(input, output, session) {
       
       cat("Linear regression results after Cochrane-orcutt correction\n")
       fit2_corrected() |> 
-        broom::tidy() %>% 
+        broom::tidy() |> 
         pander::pander()
       
     }
@@ -2186,7 +2430,7 @@ server <- function(input, output, session) {
       df = tibble(variable = names(vif),
                   vif = vif)
       
-      df %>% 
+      df |> 
         pander::pander()
     }
   })
@@ -2211,7 +2455,7 @@ server <- function(input, output, session) {
     if(input$run2 < 0){
       return("")
     }else if(input$run2 > 0){
-      fit2() %>% 
+      fit2() |> 
         cochrane.orcutt(convergence = 5, max.iter = 1000)
     }
   )
@@ -2245,8 +2489,8 @@ server <- function(input, output, session) {
     }else if(!is.null(input$file) & input$run3 > 0){
       y = data_ridge()$dependent_var
       
-      x = data_ridge() %>% 
-        dplyr::select(input$x_vars) %>% 
+      x = data_ridge() |> 
+        dplyr::select(input$x_vars) |> 
         data.matrix()
       
       cv_model <- cv.glmnet(x, y, alpha = 0)
@@ -2317,8 +2561,8 @@ server <- function(input, output, session) {
     }else if(!is.null(input$file) & input$run4 > 0){
       cat("Stepwise regression - Forward Results \n")
       
-      forward_fit() %>% 
-        broom::tidy() %>% 
+      forward_fit() |> 
+        broom::tidy() |> 
         pander::pander()
       
       cat("Performance metrics \n")
@@ -2333,8 +2577,8 @@ server <- function(input, output, session) {
       return(cat("Please run the model first!"))
     }else if(!is.null(input$file) & input$run5 > 0){
       cat("Stepwise regression - Backward Results \n")
-      backward_fit() %>% 
-        broom::tidy() %>% 
+      backward_fit() |> 
+        broom::tidy() |> 
         pander::pander()
       
       cat("Performance metrics \n")
@@ -2350,8 +2594,8 @@ server <- function(input, output, session) {
       return(cat("Please run the model first!"))
     }else if(input$run_z > 0){
       cat("Multiple linear regression results for zero intercept model \n")
-      fit_zero() %>% 
-        broom::tidy() %>% 
+      fit_zero() |> 
+        broom::tidy() |> 
         pander::pander()
       
       cat("Performance metrics \n")

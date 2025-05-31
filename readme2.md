@@ -1,4 +1,4 @@
-**WELCOME TO THE MODELING APP**
+## WELCOME TO THE MODELING APP
 
 The main purpose of the app is to fit linear regression models, time series models, 
 IV regression models, Machine learning models and ridge regression model. Please use the following steps.
@@ -54,3 +54,4 @@ The null hypothesis and alternative hypothesis for the auto-correlation test is;
 
 **N/B:** All the statistical tests are performed at 5% significance level; we reject the null hypothesis is the p-values is less than 5%.
 
+## Machine Learning Models

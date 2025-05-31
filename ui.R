@@ -157,7 +157,8 @@ ui <- page_sidebar(
                                         )
                              ),
                              
-                             navbarMenu("Machine learning models",
+                             navbarMenu("Machine Learning models",
+                                  
                                         
                                         tabPanel(
                                           
@@ -168,29 +169,67 @@ ui <- page_sidebar(
                                                       max   = 1,
                                                       step  = 0.05),
                                           
-                                          title = "Decision tree model",
+                                          title = "Logistic Classification",
+                                          actionButton("idn0", "Click here to run the model"),
+                                          #downloadButton("dw0","Download predictions"),
+                                          verbatimTextOutput("metrics0"),
+                                          DTOutput("preds0")
+                                        ),
+                                        
+                                        tabPanel(  
+                                          
+                                          sliderInput(inputId = "prop",
+                                                      label = "Proportion for the training set",
+                                                      value = 0,
+                                                      min   = 0,
+                                                      max   = 1,
+                                                      step  = 0.05),
+                                          
+                                          title = "Decision Tree",
                                           actionButton("idn1", "Click here to run the model"),
-                                          downloadButton("dw1","Download predictions"),
+                                          #downloadButton("dw1","Download predictions"),
                                           verbatimTextOutput("metrics1"),
                                           DTOutput("preds1")
                                         ),
                                         
                                         tabPanel(
-                                          title = "Random forest model",
+                                          
+                                          sliderInput(inputId = "prop",
+                                                      label = "Proportion for the training set",
+                                                      value = 0,
+                                                      min   = 0,
+                                                      max   = 1,
+                                                      step  = 0.05),
+                                          
+                                          title = "Random Forest",
                                           actionButton("idn2", "Click here to run the model"),
-                                          downloadButton("dw2","Download predictions"),
+                                          #downloadButton("dw2","Download predictions"),
                                           verbatimTextOutput("metrics2"),
                                           DTOutput("preds2")
                                         ),
                                         
                                         tabPanel(
-                                          title = "SVM model",
+                                          
+                                          sliderInput(inputId = "prop",
+                                                      label = "Proportion for the training set",
+                                                      value = 0,
+                                                      min   = 0,
+                                                      max   = 1,
+                                                      step  = 0.05),
+                                          
+                                          title = "Support Vector Machine",
                                           actionButton("idn33", "Click here to run the model"),
-                                          downloadButton("dw33","Download predictions"),
+                                          #downloadButton("dw33","Download predictions"),
                                           verbatimTextOutput("metrics33"),
                                           verbatimTextOutput("svm_summary"),
                                           DTOutput("preds3")
                                         )
+                                        
+                                        # tabPanel(
+                                        #   title = "Model Comparison\n",
+                                        #   
+                                        #   verbatimTextOutput("mod_comp")
+                                        # )
                                         
                              ),
                              
