@@ -52,8 +52,10 @@ ui <- page_sidebar(
                              ),
                              
                              navbarMenu("Transform Data",
-
+                                        
                                         tabpanFun1(id = "raw_data1",      id2 = "down_raw",  label = "Raw data", OutputId = "raw_data"),
+                                        
+                                        tabpanFun1(id = "imp_data1",      id2 = "down_imp",  label = "Imputed data", OutputId = "imp_data"),
  
                                         tabpanFun1(id = "l_transform",    id2 = "down_log",  label = "Log transform", OutputId = "log_data"),
 

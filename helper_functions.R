@@ -37,6 +37,7 @@ library(thematic)
 library(xlsx)
 library(DBI)
 library(matlib)
+library(VIM)
 
 oldOpt <- options()
 options(xlsx.date.format="dd MMM, yyyy")
@@ -48,7 +49,7 @@ options(scipen=999)
 vars <- tibble::tribble(
   
   ~id, ~ label, ~ multiple,
-  "y_var", "select continuous outcome variable", FALSE,
+  "y_var", "select your dependent variable", FALSE,
   "series", "choose a series to interpolate", FALSE,
   "x_vars", "select predictor variables", TRUE,
   "tr_vars", "select variables to transform", TRUE,

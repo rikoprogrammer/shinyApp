@@ -44,7 +44,7 @@ server <- function(input, output, session) {
   vars2 <- tibble::tribble(
     
     ~id, ~ label,
-    "y_var", "select continuous outcome variable",
+    "y_var", "select your dependent variable",
     "x_vars", "select predictor variables",
     "tr_vars", "select variables to transform",
     "endo_vars", "endogenous variables",
@@ -1099,7 +1099,7 @@ server <- function(input, output, session) {
 ###### END OF THE SECOND APP: IV regression and machine learning models ###
  
 
-  #### Rendering the raw data and the log transformed data sets
+  #### Rendering the raw data, imputed data, and the log transformed data sets
   
   output$raw_data <- renderDT({
     req(input_dataset())
@@ -1111,6 +1111,18 @@ server <- function(input, output, session) {
     }
     
   })
+  
+  output$imp_data <- renderDT({
+    req(input_dataset())
+    
+    if(is.null(input$file) & input$imp_data1 < 0) {
+      return("")
+    }else{
+      imp_data()
+    }
+    
+  })
+  
   
   
   output$log_data <- renderDT(
@@ -1396,6 +1408,49 @@ server <- function(input, output, session) {
     
   } )
   
+  # imputed dataset
+  
+  # === Perform KNN Imputation === 2nd June 2025
+  # Only apply KNN to numeric columns
+  
+  numeric_cols <- 
+    reactive(
+      
+      input_dataset() |> 
+        dplyr::select(where(is.numeric))
+      
+    )
+  
+  non_numeric_cols <- 
+    reactive(
+      
+      input_dataset() |> 
+        dplyr::select(where(Negate(is.numeric)))
+    )
+  
+  
+  
+  
+  imputed_numeric <- 
+    reactive({
+      
+      if (ncol(numeric_cols()) == 0) stop("No numeric columns found to impute.")
+      
+      numeric_cols() |> 
+        VIM::kNN(k = 5) |> # fix the number of neighbors to five for now - maybe we will change this to allow the user to specify in the next release of the app
+        dplyr::select(is.numeric)
+    })
+  
+
+  
+  imp_data <- 
+    reactive(
+      
+      non_numeric_cols() |> 
+        bind_cols(imputed_numeric())
+    )
+    
+  
   
   #Transformed data sets
   
@@ -1409,13 +1464,13 @@ server <- function(input, output, session) {
   log_data <- reactive({
     
    tr_data() |> 
-      dplyr::select_if(is.numeric) |> 
+      dplyr::select_if(where(is.numeric)) |> 
       log()
   })
   
   first_diff_data <- reactive({
     tr_data() |> 
-      dplyr::select_if(is.numeric) |> 
+      dplyr::select_if(where(is.numeric)) |> 
       as.matrix() |> 
       diff()
   })
@@ -1423,30 +1478,42 @@ server <- function(input, output, session) {
   ts_lag1 <- reactive({
     
     tr_data() %>%
-      dplyr::select_if(is.numeric) |> 
+      dplyr::select_if(where(is.numeric)) |> 
       dplyr::lag()
   })
   
   ts_lag2 <- reactive({
     
     tr_data() |> 
-      dplyr::select_if(is.numeric) |> 
+      dplyr::select_if(where(is.numeric)) |> 
       dplyr::lag(2)
   })
   
   ts_lag3 <- reactive({
     
     tr_data() |> 
-      dplyr::select_if(is.numeric) |> 
+      dplyr::select_if(where(is.numeric)) |> 
       dplyr::lag(3)
   })
   
   ts_lag4 <- reactive({
     
     tr_data() |> 
-      dplyr::select_if(is.numeric) |> 
+      dplyr::select_if(where(is.numeric)) |> 
       dplyr::lag(4)
   })
+  
+  
+  output$down_imp <- downloadHandler(
+    
+    filename = function() {
+      paste("imputed_data", ".csv", sep = "")
+    },
+    
+    content = function(file) {
+      write.csv(imp_data(), file, row.names = FALSE)
+    }
+  )
   
 
   output$down_raw <- downloadHandler(
