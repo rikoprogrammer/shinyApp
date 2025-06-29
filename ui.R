@@ -277,15 +277,27 @@ ui <- page_sidebar(
                                
                              ),
                              
+                             navbarMenu("Kalman Filter",
+                                        
+                             tabPanel(
+                               title = "Kalman Filter without constraint",
+                               actionButton("id_kalman0","Click here to run the model"),
+                               #downloadButton("kalman_d","Download coefficients"),
+                               
+                               verbatimTextOutput("kalman_summary0"),
+                               plotOutput('kalman_plot0')
+                               
+                             ),
                              
                              tabPanel(
-                               title = "Kalman Filter plus constraint",
+                               title = "Kalman Filter with constraint",
                                actionButton("id_kalman","Click here to run the model"),
                                #downloadButton("kalman_d","Download coefficients"),
                                
                                verbatimTextOutput("kalman_summary"),
                                plotOutput('kalman_plot')
                                
+                             )
                              ),
                              
                              tabPanel(

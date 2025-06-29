@@ -801,6 +801,8 @@ server <- function(input, output, session) {
   
   ### KALMAN-FILTER IMPLEMENTATION - 03rd Mar 2025
   
+  ## Kalman Filter with constraint
+  
   
   kalman_df <- reactive(
     
@@ -882,8 +884,7 @@ server <- function(input, output, session) {
       a <-  x_hat_estimates[1, ]
       prediction <-a[-length(a)]
       
-      
-      # Assuming a and Samuel_PADD1 are already loaded data frames with V10 and x10 columns
+    
       
       # Create time series objects
       x1 <- measurements
@@ -970,8 +971,7 @@ server <- function(input, output, session) {
       
       a <-  x_hat_estimates[1, ]
       prediction <-a[-length(a)]
-  
-      # Assuming a and Samuel_PADD1 are already loaded data frames with V10 and x10 columns
+
       
       # Create time series objects
       x1 <- measurements
@@ -991,13 +991,194 @@ server <- function(input, output, session) {
       # Add a legend to differentiate between the two time series
       legend("topright", legend = c("x1", "x2"), col = c("blue", "red"), lty = 1, lwd = 2)
       
+    }
+    
+  })
+  
+  
+  
+  ## Place-holder code for Kalman Filter without the constraint - this maybe modified at a latter date
+  
+  output$kalman_summary0 <- renderPrint({
+    
+    if(input$id_kalman > 0){
       
+      y1 <- kalman_df()$dep
+      y1 <- na.omit(y1)
+      x1 <- kalman_df()$indep
+      
+      
+      
+      # Time step
+      delta_t <- 1
+      
+      # State transition matrix F
+      F <- matrix(c(1, delta_t, 0, 1), nrow = 2)
+      
+      # Measurement matrix H
+      H <- matrix(c(1, 0), nrow = 1)
+      
+      # Process noise covariance Q
+      Q <- matrix(c(0.1, 0, 0, 0.1), nrow = 2)
+      
+      # Measurement noise covariance R
+      R <- matrix(1, nrow = 1)
+      
+      # Initial state estimate
+      x_hat <- matrix(c(13000, 13000), nrow = 2)
+      
+      # Initial error covariance
+      P <- matrix(c(1, 0, 0, 1), nrow = 2)
+      
+      # Number of time steps
+      n_steps <- 98
+      
+      
+      
+      # Simulated true position
+      true_position <- x1
+      
+      # Simulate noisy measurements
+      set.seed(123)
+      measurements <- y1
+      
+      # Storage for estimates
+      x_hat_estimates <- matrix(NA, nrow = 2, ncol = n_steps)
+      
+      # Kalman Filter loop
+      for (k in 1:n_steps) {
+        # Predict
+        x_hat <- F %*% x_hat
+        P <- F %*% P %*% t(F) + Q
+        
+        # Update
+        y <- measurements[k] - H %*% x_hat
+        S <- H %*% P %*% t(H) + R
+        K <- P %*% t(H) %*% solve(S)
+        
+        x_hat <- x_hat + K %*% y
+        P <- (diag(2) - K %*% H) %*% P
+        
+        # Store the estimates
+        x_hat_estimates[, k] <- x_hat
+      }
+      
+      
+      
+      a <-  x_hat_estimates[1, ]
+      prediction <-a[-length(a)]
+      
+      
+      
+      # Create time series objects
+      x1 <- measurements
+      
+      x2 <- a
+      
+      #print estimates and prediction
+      
+      # cat('Estimates')
+      # print(x_hat_estimates)
+      
+      cat("Predictions \n")
+      print(prediction)
       
     }
     
+  })
+  
+  output$kalman_plot0 <- renderPlot({
     
+    if(input$id_kalman > 0){
+      
+      y1 <- kalman_df()$dep
+      y1 <- na.omit(y1)
+      x1 <- kalman_df()$indep
+      
+      
+      
+      # Time step
+      delta_t <- 1
+      
+      # State transition matrix F
+      F <- matrix(c(1, delta_t, 0, 1), nrow = 2)
+      
+      # Measurement matrix H
+      H <- matrix(c(1, 0), nrow = 1)
+      
+      # Process noise covariance Q
+      Q <- matrix(c(0.1, 0, 0, 0.1), nrow = 2)
+      
+      # Measurement noise covariance R
+      R <- matrix(1, nrow = 1)
+      
+      # Initial state estimate
+      x_hat <- matrix(c(13000, 13000), nrow = 2)
+      
+      # Initial error covariance
+      P <- matrix(c(1, 0, 0, 1), nrow = 2)
+      
+      # Number of time steps
+      n_steps <- 98
+      
+      
+      
+      # Simulated true position
+      true_position <- x1
+      
+      # Simulate noisy measurements
+      set.seed(123)
+      measurements <- y1
+      
+      # Storage for estimates
+      x_hat_estimates <- matrix(NA, nrow = 2, ncol = n_steps)
+      
+      # Kalman Filter loop
+      for (k in 1:n_steps) {
+        # Predict
+        x_hat <- F %*% x_hat
+        P <- F %*% P %*% t(F) + Q
+        
+        # Update
+        y <- measurements[k] - H %*% x_hat
+        S <- H %*% P %*% t(H) + R
+        K <- P %*% t(H) %*% solve(S)
+        
+        x_hat <- x_hat + K %*% y
+        P <- (diag(2) - K %*% H) %*% P
+        
+        # Store the estimates
+        x_hat_estimates[, k] <- x_hat
+      }
+      
+      
+      
+      a <-  x_hat_estimates[1, ]
+      prediction <-a[-length(a)]
+      
+      
+      # Create time series objects
+      x1 <- measurements
+      
+      x2 <- a
+      
+      # Determine the range of the y-axis to accommodate both time series
+      y_range <- range(c(x1, x2), na.rm = TRUE)
+      
+      # Plot the first time series with adjusted y-axis limits
+      plot(x1, type = "l", col = "blue", lwd = 2, ylab = "Values", xlab = "Time", 
+           main = "", ylim = y_range)
+      
+      # Add the second time series to the same plot
+      lines(x2, col = "red", lwd = 2)
+      
+      # Add a legend to differentiate between the two time series
+      legend("topright", legend = c("x1", "x2"), col = c("blue", "red"), lty = 1, lwd = 2)
+      
+    }
     
   })
+  
   
   
   ### SOLVER IMPLEMENTATION - not yet implemented
